@@ -1,9 +1,15 @@
-import datetime
+import json
+import base64
 
-x = datetime.datetime.now().strftime("%H:%M:%S")
+test_obj = {
+    "id": None,
+    "issuer_id": 123456789012345678,
+}
 
-print(x)
+with open("test.json", "w") as f:
+    json.dump(test_obj, f, indent=4)
 
-new_x = datetime.datetime.strptime(x, "%H:%M:%S")
-
-print(new_x)
+with open("test.json", "r") as f:
+    data = json.load(f)
+    print(data["id"])
+    print(data["issuer_id"])

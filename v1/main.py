@@ -1,12 +1,10 @@
-import os, json, re
+import os, json, re, uuid, base64
 import discord as dc
 import typing
 
-from datetime import datetime
-from discord.ext import commands
+from datetime import datetime, timedelta
+from discord.ext import tasks, commands
 from dotenv import load_dotenv
-
-from ReminderLib.ReminderController import ReminderController
 
 ### GLOBALS
 load_dotenv()
@@ -18,7 +16,7 @@ intents.guild_messages = True
 
 bot = commands.Bot(command_prefix="rm.", intents=intents)
 
-reminder_controller = ReminderController(bot)
+reminders = []
 
 @bot.event
 async def on_ready():
@@ -27,12 +25,28 @@ async def on_ready():
     """
 
     print(f"[INIT] Logged in as {bot.user.name}")
+    print("[INIT] Loading reminders...")
     for guild in bot.guilds:
-        await reminder_controller.load_reminders(guild.id)
-        print(f"[INIT] Loaded reminders for {guild.name} - {guild.id}")
+        # Create folder for the guild if it doesn't exist
+        if not os.path.exists(f"data/{guild.id}"):
+            os.makedirs(f"data/{guild.id}")
+            print(f"[INIT] Created folder for guild: {guild.name} - {guild.id}")
 
-    await reminder_controller.start_reminders()
-    print(f"[INIT] Loaded {len(reminder_controller.reminders)} reminders")
+        # Create reminders file if it doesn't exist
+        if not os.path.exists(f"data/{guild.id}/reminders.json"):
+            with open(f"data/{guild.id}/reminders.json", "w") as f:
+                json.dump([], f, indent=4)
+            print(f"[INIT] Created reminders file for guild: {guild.name} - {guild.id}")
+
+        # Load reminders for the guild
+        reminders = await load_reminders(guild.id)
+        print(f"\t[INIT] Loaded reminders for {guild.name} - {guild.id}")
+    print(f"[INIT] Loaded {len(reminders)} reminders!")
+
+    # Start the reminder loop
+    if not check_reminders.is_running():
+        check_reminders.start()
+        print("[INIT] Started reminder loop!")
 
 @bot.event
 async def on_message(message : dc.Message):
@@ -58,95 +72,68 @@ async def on_guild_join(guild : dc.Guild):
         with open(f"data/{guild.id}/reminders.json", "w") as f:
             json.dump([], f, indent=4)
         print(f"[MAIN] Created reminders file for guild: {guild.name} - {guild.id}")
-    else:
-        print(f"[MAIN] Reminders file already exists for guild: {guild.name} - {guild.id}")
 
 @bot.hybrid_command(
-    name="remind_at", 
-    description="Set a reminder"
+    name="remind",
+    description="Set a reminder for yourself or someone else",
+    time="Scheduled time in HH:MM format",
+    mentions="Mention a user or a role",
 )
-async def remind_at(
-    ctx,
-    title : str,
-    subtitles : typing.Optional[str] = None,
-    messages : typing.Optional[str] = None,
-    footer : typing.Optional[str] = None,
-    time : typing.Optional[str] = datetime.now().strftime("%H:%M:%S"),
-    repeat : bool = False,
-    user_mention : typing.Optional[dc.User] = None,
-    role_mention : typing.Optional[dc.Role] = None,
+async def create_reminder(
+    ctx : commands.Context,
+    time : typing.Optional[str] = datetime.now().strftime("%H:%M"), # Inital time to remind
+    title : str = "",                                               # Title of the reminder
+    subtitles : str = "",                                           # Subtitle of the reminder
+    messages : str = "",                                             # Message to send
+    mentions : str = "",                                            # Mentions to send the reminder to
+    repeat : typing.Optional[str] = None,                           # Interval to repeat the reminder in the same format as time (i.e. amount of time to add)
 ):
-    res = await ctx.send("Creating reminder...", ephemeral=True)
-    if user_mention and role_mention is None:
-        mentions = [ctx.author]
-    else:
-        mentions = []
-        if user_mention:
-            mentions.append(user_mention)
-        if role_mention:
-            mentions.append(role_mention)
+    """
+    Create a reminder!
+    """
+    mention_str = await get_mentions(mentions, ctx.guild)
+
+    if mention_str is []:
+        mention_str = [ctx.author.mention]
     
-    # Parse Time
-    if time:
-        try:
-            set_time = datetime.strptime(time, "%H:%M:%S").time()
-        except ValueError:
-            await ctx.send("Invalid start time format.\nPlease use format 'HH:MM:SS'", ephemeral=True)
-            return
+    # Parse Subtitles and Messages
+    subs = []
+    for subtitle in subtitles.split("\n"):
+        subs.append(subtitle)
 
-    await reminder_controller.create_reminder( 
-            title,
-            subtitles,
-            messages,
-            footer,
-            int(ctx.channel.id),
-            set_time,
-            repeat,
-            mentions,
-            ctx.guild.id
-        )
+    msgs = []
+    for message in messages.split("\n"):
+        msgs.append(message)
+
+    if len(subs) != len(msgs):
+        await ctx.send("The number of subtitles and messages must be the same!", ephemeral=True)
+        return
     
-    await res.edit("Reminder created!", ephemeral=True)
+    repeat_seconds = await time2seconds(ctx, repeat) if repeat else None
 
-@bot.hybrid_command(
-    name="remind_in", 
-    description="Remind me in a certain amount of time"
-)
-async def remind_in(
-    ctx,
-    title : str,
-    subtitles : typing.Optional[str] = None,
-    messages : typing.Optional[str] = None,
-    footer : typing.Optional[str] = None,
-    delay : str = "10s",
-    mentions : typing.Optional[dc.User] = None
-):
-    # Parse delay
-    d = await time2seconds(ctx, delay)
+    reminders.append({
+        "issuer_id": ctx.author.id,
+        "guild_id": ctx.guild.id,
+        "channel_id": ctx.channel.id,
+        "reminder_id": base64.b64encode(uuid.uuid4().bytes).decode('utf-8').strip("=="),
 
-    # Parse Start Time
-    time = datetime.now() + datetime.timedelta(seconds=d)
+        "time": datetime.strptime(time, "%H:%M").strftime("%H:%M"),
+        "title": title,
+        "subtitles": subtitles,
+        "message": message,
+        "mentions": mention_str,
+        "repeat": int(repeat_seconds/60) if repeat else None,
+    })
 
-    await reminder_controller.create_reminder( 
-            title,
-            subtitles,
-            messages,
-            footer,
-            int(ctx.channel.id),
-            time,
-            False,
-            mentions,
-            ctx.guild.id
-        )
+    # Save reminders to file
+    if not os.path.exists(f"data/{ctx.guild.id}"):
+        os.makedirs(f"data/{ctx.guild.id}")
+        print(f"[MAIN] Created folder for guild: {ctx.guild.name} - {ctx.guild.id}")
 
-@bot.hybrid_command(
-    name="reminders", 
-    description="List all reminders"
-)
-async def reminders(ctx):
-    for reminder in reminder_controller.reminders:
-        if 
+    with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
+        json.dump(reminders, f, indent=4)
 
+    await ctx.send(f"Reminder set for {ctx.author.mention} at {time} with message: {message}", ephemeral=True)
 
 async def time2seconds(ctx, duration_str : str) -> int:
     """
@@ -163,7 +150,7 @@ async def time2seconds(ctx, duration_str : str) -> int:
     # Find all occurrences of number followed by a letter
     matches = re.findall(r'(\d+)\s*([dhms])', duration_str.lower())
     if not matches:
-        await ctx.send("Invalid time format. Please use a format '1d 2h 12m 3s' separated by spaces.", ephemeral=True)
+        await ctx.send("Invalid time format. Please use a format '1d 2h 12m' separated by spaces.", ephemeral=True)
         return 0
     
     total_seconds = 0
@@ -172,15 +159,212 @@ async def time2seconds(ctx, duration_str : str) -> int:
 
     return total_seconds
 
-@bot.command(name="sync")
+async def get_mentions(mentions : str, guild : dc.Guild) -> typing.List[dc.User | dc.Role]:
+    """
+    Get mentions from a string
+    """
+    print(f"[DEBUG] Mentions: {mentions}")
+    mention_ids = re.findall(r'<@!?(\d+)>|<@&(\d+)>', mentions)
+    mention_strs = []
+    for user_id, role_id in mention_ids:
+        print(f"[DEBUG] User ID: {user_id} - Role ID: {role_id}")
+        if user_id:
+            member = await guild.fetch_member(int(user_id))
+            print(f"[DEBUG] Member: {member}")
+            if member:
+                mention_strs.append(member.mention)
+        elif role_id:
+            role = guild.get_role(int(role_id))
+            if role:
+                mention_strs.append(role.mention)
+        print(f"[DEBUG] Mention: {mention_strs}")
+
+    print(f"[DEBUG] Mentions: {mention_strs}")
+
+    return mention_strs
+
+async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
+    """
+    Load reminders from file
+    """
+    if not os.path.exists(f"data/{guild_id}/reminders.json"):
+        return []
+
+    with open(f"data/{guild_id}/reminders.json", "r") as f:
+        reminders = json.load(f)
+
+    return reminders
+
+@bot.hybrid_command(
+    name="reminderlist",
+    description="List all reminders for the server",
+)
+async def list_reminders(ctx : commands.Context):
+    """
+    List all reminders for the server
+    """
+    reminders = await load_reminders(ctx.guild.id)
+
+    em = dc.Embed(
+        title="Reminders",
+        description="List of reminders",
+        color=0x00ff00,
+    )
+
+    if len(reminders) == 0:
+        em.add_field(
+            name="No reminders",
+            value="There are no reminders set for this server.",
+            inline=False,
+        )
+    else:
+        for reminder in reminders:
+            em.add_field(
+                name=f"Reminder for {reminder['issuer_id']}",
+                value=f"> Time: {reminder['time']}\n> Title: {reminder['title']}\n> ID: {reminder['reminder_id']}",
+                inline=False,
+            )
+    
+    await ctx.send(embed=em, ephemeral=True)
+
+@bot.hybrid_command(
+    name="getreminder",
+    description="Get a reminder by ID",
+)
+async def get_reminder(
+    ctx : commands.Context,
+    reminder_id : str,
+):
+    """
+    Get a reminder by ID
+    """
+    reminders = await load_reminders(ctx.guild.id)
+
+    for reminder in reminders:
+        if reminder["reminder_id"] == reminder_id:
+            em = dc.Embed(
+                title="Reminder",
+                description="Reminder details",
+                color=0x00ff00,
+            )
+            em.add_field(
+                name="Reminder",
+                value=f"> Time: {reminder['time']}\n> Title: {reminder['title']}\n> Message: {reminder['message']}",
+                inline=False,
+            )
+            await ctx.send(embed=em, ephemeral=True)
+            return
+
+    await ctx.send("Reminder not found", ephemeral=True)
+
+@bot.hybrid_command(
+    name="delete",
+    description="Delete a reminder by ID",
+)
+async def delete_reminder(
+    ctx : commands.Context,
+    reminder_id : str,
+):
+    """
+    Delete a reminder by ID
+    """
+    reminders = await load_reminders(ctx.guild.id)
+
+    for reminder in reminders:
+        if reminder["reminder_id"] == reminder_id:
+            reminders.remove(reminder)
+            with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
+                json.dump(reminders, f, indent=4)
+            await ctx.send("Reminder deleted", ephemeral=True)
+            return
+
+    await ctx.send("Reminder not found", ephemeral=True)
+
+@tasks.loop(seconds=60)
+async def check_reminders():
+    """
+    Check reminders every minute
+    """
+    print("[REMI] Checking reminders...")
+    now = datetime.now().strftime("%H:%M")
+    for guild in bot.guilds:
+        reminders = await load_reminders(guild.id)
+        for reminder in reminders:
+            print(f"[DEBUG] Time is {now} - Reminder is {reminder['time']}")
+            print(f"[DEBUG] {reminder['time'] == now }")
+            
+            # If reminder is in the past
+            # If the reminder is set to repeat, add the repeat time (minutes) to the reminder
+            if reminder["repeat"] is not None:
+                while datetime.strptime(reminder["time"], "%H:%M") < datetime.strptime(now, "%H:%M"):
+                    reminder["time"] = datetime.strftime((datetime.strptime(reminder["time"], "%H:%M") + timedelta(minutes=reminder["repeat"])), "%H:%M")
+
+            else: 
+                # If the reminder is not set to repeat, do it now, and remove it later
+                if datetime.strptime(reminder["time"], "%H:%M") < datetime.strptime(now, "%H:%M"):
+                    reminder["time"] = now
+
+            if reminder["time"] == now:
+                channel = bot.get_channel(reminder["channel_id"])
+                
+                if reminder["repeat"] is not None:
+                    # If the reminder is set to repeat, add the repeat time (minutes) to the reminder
+                    reminder["time"] = datetime.strftime((datetime.strptime(reminder["time"], "%H:%M") + timedelta(minutes=reminder["repeat"])), "%H:%M")
+
+                else:
+                    # If the reminder is not set to repeat, remove it from the list
+                    reminders.remove(reminder)
+                
+                # Save reminders to file
+                with open(f"data/{guild.id}/reminders.json", "w") as f:
+                    json.dump(reminders, f, indent=4)
+
+                # Add the mentions to the message
+                payload = ""
+                for mention in reminder["mentions"]:
+                    payload += f"{mention} "
+                
+                # Create the embed
+                em = dc.Embed(
+                    title=reminder["title"],
+                    color=0x00ff00,
+                )
+
+                # Parse Subtitles and Messages
+                subtitles = []
+                for subtitle in reminder["subtitles"].split("\\n"):
+                    subtitles.append(subtitle)
+
+                messages = []
+                for message in reminder["message"].split("\\n"):
+                    messages.append(message)
+                    
+                # Add the subtitles and messages to the embed
+                for i, subtitle in enumerate(subtitles):
+                    em.add_field(
+                        name=subtitle,
+                        value=messages[i],
+                        inline=False,
+                    )
+                
+                # Send the message
+                await channel.send(f"{payload}", embed=em)
+                print(f"\t[REMI] Sent reminder to {channel.name} - {channel.id} in {guild.name} - {guild.id}") 
+    print("[REMI] Finished checking reminders!")
+
+@bot.command(
+    name="sync",
+    description="sync the tree",
+)
 @commands.is_owner()
-async def sync(ctx):
+async def sync(ctx : commands.Context):
     """
-    Syncs the bot with the guild
+    Sync the tree
     """
-    print("Syncing...")
-    await bot.tree.sync(guild=ctx.guild)
-    print("Synced!")
-    await ctx.send("Synced!")
+    msg = await ctx.send("Syncing...", ephemeral=True)
+    await bot.tree.sync()
+    await ctx.message.delete()
+    await msg.edit(content="Synced the tree!", delete_after=2)
+    print("[MAIN] Synced the tree!")
 
 bot.run(os.getenv("TEST_TOKEN"))

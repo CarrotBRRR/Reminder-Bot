@@ -163,23 +163,17 @@ async def get_mentions(mentions : str, guild : dc.Guild) -> typing.List[dc.User 
     """
     Get mentions from a string
     """
-    print(f"[DEBUG] Mentions: {mentions}")
     mention_ids = re.findall(r'<@!?(\d+)>|<@&(\d+)>', mentions)
     mention_strs = []
     for user_id, role_id in mention_ids:
-        print(f"[DEBUG] User ID: {user_id} - Role ID: {role_id}")
         if user_id:
             member = await guild.fetch_member(int(user_id))
-            print(f"[DEBUG] Member: {member}")
             if member:
                 mention_strs.append(member.mention)
         elif role_id:
             role = guild.get_role(int(role_id))
             if role:
                 mention_strs.append(role.mention)
-        print(f"[DEBUG] Mention: {mention_strs}")
-
-    print(f"[DEBUG] Mentions: {mention_strs}")
 
     return mention_strs
 
@@ -290,9 +284,6 @@ async def check_reminders():
     for guild in bot.guilds:
         reminders = await load_reminders(guild.id)
         for reminder in reminders:
-            print(f"[DEBUG] Time is {now} - Reminder is {reminder['time']}")
-            print(f"[DEBUG] {reminder['time'] == now }")
-            
             # If reminder is in the past
             # If the reminder is set to repeat, add the repeat time (minutes) to the reminder
             if reminder["repeat"] is not None:

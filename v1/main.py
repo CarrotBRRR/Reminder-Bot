@@ -147,6 +147,8 @@ async def create_reminder(
     """
     Create a reminder!
     """
+    reminders = await load_reminders(ctx.guild.id)
+    
     print(f"[MAIN] {ctx.author.name} creating reminder in {ctx.guild.name}")
     print(f"\t[MAIN] Parsing info...")
     print(f"\t\t[MAIN] Parsing mentions...")

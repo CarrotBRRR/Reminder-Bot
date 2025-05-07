@@ -346,10 +346,12 @@ async def check_reminders():
         for reminder in reminders:
             # If reminder is in the past
             # If the reminder is set to repeat, add the repeat time (minutes) to the reminder
+            do_reminder = False
             if reminder["repeat"] is not None:
                 reminder_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M")
                 now_time = datetime.strptime(now, "%y-%m-%d-%H:%M")
                 if reminder_time < now_time:
+                    do_reminder = True
                     print(f"\t[REMI] Reminder {reminder['reminder_id']} is in the past!")
                     delta = now_time - reminder_time
                     repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1
@@ -365,9 +367,9 @@ async def check_reminders():
                 # If the reminder is not set to repeat, do it now, and remove it later
                 if datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") < datetime.strptime(now, "%y-%m-%d-%H:%M"):
                     print(f"\t[REMI] Reminder time is in the past! No Repeat set. Doing Reminder now.")
-                    reminder["time"] = now
+                    do_reminder = True
 
-            if reminder["time"] == now:
+            if do_reminder:
                 print(f"\t[REMI] {now} Reminder found by {reminder['issuer_id']} in {guild.name}")
                 channel = bot.get_channel(reminder["channel_id"])
 

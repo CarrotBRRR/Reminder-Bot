@@ -339,15 +339,21 @@ async def check_reminders():
                 now_time = datetime.strptime(now, "%H:%M")
                 print(f"\t[DEBUG] Reminder time: {reminder_time}, Now time: {now_time}")
                 if reminder_time < now_time:
-                    print(f"\t[DEBUG] Reminder time is in the past!")
+                    print(f"\t[REMI] Reminder time is in the past!")
                     delta = now_time - reminder_time
                     repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1
                     reminder_time += timedelta(minutes=reminder["repeat"] * repeats_passed)
                     reminder["time"] = reminder_time.strftime("%H:%M")
+                    print(f"\t[REMI] Reminder time updated to: {reminder['time']}")
+
+                    # Save the new reminder
+                    with open(f"data/{guild.id}/reminders.json", "w") as f:
+                        json.dump(reminders, f, indent=4)
 
             else: 
                 # If the reminder is not set to repeat, do it now, and remove it later
                 if datetime.strptime(reminder["time"], "%H:%M") < datetime.strptime(now, "%H:%M"):
+                    print(f"\t[REMI] Reminder time is in the past! No Repeat set.")
                     reminder["time"] = now
 
             if reminder["time"] == now:

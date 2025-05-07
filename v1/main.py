@@ -24,6 +24,7 @@ async def on_ready():
     """
     Called when the bot is ready
     """
+    global reminder_task
 
     print(f"[INIT] Logged in as {bot.user.name}")
     print("[INIT] Loading reminders...")
@@ -46,7 +47,7 @@ async def on_ready():
 
     # Start the reminder loop
     if not check_reminders.is_running():
-        check_reminders.start()
+        reminder_task = check_reminders.start()
         print("[INIT] Started reminder loop!")
 
 @bot.event
@@ -436,16 +437,11 @@ async def reload(ctx : commands.Context):
     print(f"[MAIN] Reloading the loop...")
 
     print(f"\t[MAIN] Stopping the loop...")
-    check_reminders.stop()
-    if check_reminders.is_running():
-        check_reminders.cancel()
-    else:
-        print(f"\t[MAIN] Loop is not running!")
-        return
+    reminder_task.stop()
     print(f"\t[MAIN] Loop stopped!")
 
     print(f"\t[MAIN] Restarting the loop...")
-    check_reminders.start()
+    reminder_task.start()
     print(f"\t[MAIN] Loop restarted!")
 
     await msg.edit("Reloaded the loop!", ephemeral=True)

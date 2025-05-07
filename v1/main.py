@@ -81,6 +81,8 @@ async def time2seconds(ctx, duration_str : str) -> int:
     Converts a time string to seconds
     """
     time_factors = {
+        'y': 31556952, # 1 year = 31536000 seconds
+        'mo': 2629746, # 1 month = 2592000 seconds
         'w': 604800, # 1 week = 604800 seconds
         'd': 86400,  # 1 day = 86400 seconds
         'h': 3600,   # 1 hour = 3600 seconds

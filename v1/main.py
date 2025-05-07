@@ -25,7 +25,7 @@ async def on_ready():
     Called when the bot is ready
     """
     print(f"[INIT] Logged in as {bot.user.name}")
-    print("[INIT] Loading reminders...")
+    print("[INIT] Checking Reminders Folders...")
     for guild in bot.guilds:
         # Create folder for the guild if it doesn't exist
         if not os.path.exists(f"data/{guild.id}"):
@@ -38,10 +38,7 @@ async def on_ready():
                 json.dump([], f, indent=4)
             print(f"[INIT] Created reminders file for guild: {guild.name} - {guild.id}")
 
-        # Load reminders for the guild
-        reminders = await load_reminders(guild.id)
-        print(f"\t[INIT] Loaded reminders for {guild.name} - {guild.id}")
-    print(f"[INIT] Loaded {len(reminders)} reminders!")
+    print(f"[INIT] Found {len(bot.guilds)} Guilds!")
 
     # Start the reminder loop
     if not check_reminders.is_running():
@@ -224,7 +221,7 @@ async def create_reminder(
     await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)
 
 @bot.hybrid_command(
-    name="reminderlist",
+    name="reminders",
     description="List all reminders for the server",
 )
 async def list_reminders(ctx : commands.Context):
@@ -248,8 +245,8 @@ async def list_reminders(ctx : commands.Context):
     else:
         for reminder in reminders:
             em.add_field(
-                name=f"Reminder for {reminder['issuer_id']}",
-                value=f"> Time: {reminder['time']}\n> Title: {reminder['title']}\n> ID: {reminder['reminder_id']}",
+                name=f"**Reminder for {reminder['issuer_id']}**",
+                value=f"> `Next Reminder at`: {reminder['time']}\n> `Title`: {reminder['title']}\n> `ID`: {reminder['reminder_id']}",
                 inline=False,
             )
     

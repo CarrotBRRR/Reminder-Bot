@@ -434,15 +434,14 @@ async def reload(ctx : commands.Context):
     """
     msg = await ctx.send("Reloading...", ephemeral=True)
     print(f"[MAIN] Reloading the loop...")
-    
+
     print(f"\t[MAIN] Stopping the loop...")
+    check_reminders.stop()
     if check_reminders.is_running():
-        print(f"\t[MAIN] Loop is running!")
         check_reminders.cancel()
     else:
         print(f"\t[MAIN] Loop is not running!")
         return
-    
     print(f"\t[MAIN] Loop stopped!")
 
     print(f"\t[MAIN] Restarting the loop...")

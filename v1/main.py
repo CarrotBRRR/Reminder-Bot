@@ -261,7 +261,7 @@ async def delete_reminder(
 
     for reminder in reminders:
         if reminder["reminder_id"] == reminder_id:
-            if reminder["issuer_id"] != ctx.author.id and ctx.author.id != ctx.guild.owner_id and not ctx.author.guild_permissions.administrator and not bot.is_owner(ctx.author):
+            if (reminder["issuer_id"] != ctx.author.id) and (ctx.author.id != ctx.guild.owner_id) and not ctx.author.guild_permissions.administrator and not await bot.is_owner(ctx.author):
                 await ctx.send("You must be the Reminder Author, Server Owner, Server Admin, or Bot Owner to delete this reminder!", ephemeral=True)
                 return
 

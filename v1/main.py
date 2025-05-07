@@ -183,7 +183,7 @@ async def create_reminder(
         return
     
     # Adding date info to the time string
-    t = datetime.strptime(time, "%y-%m-%d-%H:%M")
+    t = datetime.strptime(time, "%H:%M")
     t = t.replace(
         year=datetime.now().year,
         month=datetime.now().month,

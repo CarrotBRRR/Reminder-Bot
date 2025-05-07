@@ -9,4 +9,4 @@ datetime_obj = datetime_obj.replace(
     month=datetime.datetime.now().month,
     day=datetime.datetime.now().day,
 )
-print(datetime_obj)
+print(datetime_obj.strftime("%Y-%m-%d-%H:%M"))

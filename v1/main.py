@@ -337,6 +337,7 @@ async def check_reminders():
             if reminder["repeat"] is not None:
                 reminder_time = datetime.strptime(reminder["time"], "%H:%M")
                 now_time = datetime.strptime(now, "%H:%M")
+                print(f"\t[DEBUG] Reminder time: {reminder_time}, Now time: {now_time}")
                 if reminder_time < now_time:
                     delta = now_time - reminder_time
                     repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1

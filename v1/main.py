@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 
 ### GLOBALS
 load_dotenv()
-reminders = []
+
+intents =reminders = []
 
 intents = dc.Intents.default()
 intents.message_content = True
@@ -120,12 +121,15 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     """
     Load reminders from file
     """
+    print(f"[MAIN] Loading reminders for {guild_id}...")
     if not os.path.exists(f"data/{guild_id}/reminders.json"):
+        print(f"\t[MAIN] No reminders found for {guild_id}. Creating file...")
         return []
 
     with open(f"data/{guild_id}/reminders.json", "r") as f:
         reminders = json.load(f)
 
+    print(f"[MAIN] Loaded {len(reminders)} reminders for {guild_id}!")
     return reminders
 
 # COMMANDS
@@ -133,7 +137,11 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     name="remind",
     description="Set a reminder for yourself or someone else",
     time="Scheduled time in HH:MM format",
+    title="Title of the reminder",
+    subtitles="Subtitles of the reminder, separated by \\n",
+    messages="Messages to send, separated by \\n",
     mentions="Mention a user or a role",
+    repeat="Interval to repeat the reminder in the format of '1w 2d 3h 4m 5s'",
 )
 async def create_reminder(
     ctx : commands.Context,
@@ -148,7 +156,7 @@ async def create_reminder(
     Create a reminder!
     """
     reminders = await load_reminders(ctx.guild.id)
-    
+
     print(f"[MAIN] {ctx.author.name} creating reminder in {ctx.guild.name}")
     print(f"\t[MAIN] Parsing info...")
     print(f"\t\t[MAIN] Parsing mentions...")
@@ -253,6 +261,10 @@ async def delete_reminder(
 
     for reminder in reminders:
         if reminder["reminder_id"] == reminder_id:
+            if reminder["issuer_id"] != ctx.author.id or ctx.author.id != ctx.guild.owner_id or not ctx.author.guild_permissions.administrator or not bot.is_owner():
+                await ctx.send("You must be the Reminder Author, Server Owner, Server Admin, or Bot Owner to delete this reminder!", ephemeral=True)
+                return
+
             reminders.remove(reminder)
             with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
                 json.dump(reminders, f, indent=4)
@@ -265,6 +277,7 @@ async def delete_reminder(
 @bot.hybrid_command(
     name="get_reminder",
     description="Test a reminder",
+    id="ID of the reminder to test",
 )
 async def test_reminder(
     ctx : commands.Context,
@@ -377,6 +390,7 @@ async def check_reminders():
 
                 else:
                     # If the reminder is not set to repeat, remove it from the list
+                    print(f"\t[REMI] No repeat set. Removing reminder {reminder['reminder_id']} from {guild.name}")
                     reminders.remove(reminder)
                 
                 # Save new
@@ -399,6 +413,21 @@ async def sync(ctx : commands.Context):
     await bot.tree.sync()
     await ctx.message.delete()
     await msg.edit(content="Synced the tree!", delete_after=2)
-    print("[MAIN] Synced the tree!")
+    print(f"[MAIN] Synced the tree!")
+
+@bot.command(
+    name="reload",
+    description="Reloads the loop",
+)
+@commands.is_owner()
+async def reload(ctx : commands.Context):
+    """
+    Reload the loop
+    """
+    msg = await ctx.send("Reloading...", ephemeral=True)
+    check_reminders.stop()
+    check_reminders.start()
+    await msg.edit("Reloaded the loop!", ephemeral=True)
+    print(f"[MAIN] Reloaded the loop!")
 
 bot.run(os.getenv("TOKEN"))

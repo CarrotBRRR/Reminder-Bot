@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 ### GLOBALS
 load_dotenv()
 
-intents =reminders = []
+reminders = []
 
 intents = dc.Intents.default()
 intents.message_content = True
@@ -24,8 +24,6 @@ async def on_ready():
     """
     Called when the bot is ready
     """
-    global reminder_task
-
     print(f"[INIT] Logged in as {bot.user.name}")
     print("[INIT] Loading reminders...")
     for guild in bot.guilds:
@@ -47,7 +45,9 @@ async def on_ready():
 
     # Start the reminder loop
     if not check_reminders.is_running():
-        reminder_task = check_reminders.start()
+        print("[REMI] Waiting for minute time...")
+        await dc.utils.sleep_until(datetime.now() + timedelta(seconds=60 - datetime.now().second))
+        check_reminders.start()
         print("[INIT] Started reminder loop!")
 
 @bot.event
@@ -426,25 +426,26 @@ async def sync(ctx : commands.Context):
 
 @bot.command(
     name="reload",
-    description="Reloads the loop",
+    description="Reloads the reminder loop",
 )
 @commands.is_owner()
-async def reload(ctx : commands.Context):
+async def reload(ctx: commands.Context):
     """
-    Reload the loop
+    Reload the reminder loop
     """
     msg = await ctx.send("Reloading...", ephemeral=True)
-    print(f"[MAIN] Reloading the loop...")
+    print("[MAIN] Reloading the reminder loop...")
 
-    print(f"\t[MAIN] Stopping the loop...")
-    reminder_task.stop()
-    print(f"\t[MAIN] Loop stopped!")
+    if check_reminders.is_running():
+        print("\t[MAIN] Stopping the reminder loop...")
+        check_reminders.stop()
+        print("\t[MAIN] Reminder loop stopped!")
 
-    print(f"\t[MAIN] Restarting the loop...")
-    reminder_task.start()
-    print(f"\t[MAIN] Loop restarted!")
+    print("\t[MAIN] Starting the reminder loop...")
+    check_reminders.start()
+    print("\t[MAIN] Reminder loop started!")
 
-    await msg.edit("Reloaded the loop!", ephemeral=True)
-    print(f"[MAIN] Bot Reloaded!")
+    await msg.edit(content="Reloaded the reminder loop!", delete_after=2)
+    print("[MAIN] Reminder loop reloaded!")
 
 bot.run(os.getenv("TOKEN"))

@@ -124,7 +124,7 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     """
     Load reminders from file
     """
-    print(f"[MAIN] Loading reminders for {guild_id}...")
+    print(f"\t[MAIN] Loading reminders for {guild_id}...")
     if not os.path.exists(f"data/{guild_id}/reminders.json"):
         print(f"\t[MAIN] No reminders found for {guild_id}. Creating file...")
         return []
@@ -132,7 +132,7 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     with open(f"data/{guild_id}/reminders.json", "r") as f:
         reminders = json.load(f)
 
-    print(f"[MAIN] Loaded {len(reminders)} reminders for {guild_id}!")
+    print(f"\t[MAIN] Loaded {len(reminders)} reminders for {guild_id}!")
     return reminders
 
 # COMMANDS
@@ -286,7 +286,7 @@ async def delete_reminder(
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
 
 @bot.hybrid_command(
-    name="get_reminder",
+    name="show_reminder",
     description="Test a reminder",
     id="ID of the reminder to test",
 )
@@ -325,8 +325,8 @@ async def test_reminder(
                     inline=False,
                 )
             
-            await channel.send(embed=em)
-            print(f"[MAIN] Tested reminder to {channel.name} - {channel.id} in {ctx.guild.name} - {ctx.guild.id}")
+            await channel.send(embed=em ,ephemeral=True)
+            print(f"[MAIN] Tested reminder {reminder['reminder_id']} to {channel.name} in {ctx.guild.name}")
             return
 
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)

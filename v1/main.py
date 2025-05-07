@@ -433,9 +433,23 @@ async def reload(ctx : commands.Context):
     Reload the loop
     """
     msg = await ctx.send("Reloading...", ephemeral=True)
-    check_reminders.stop()
+    print(f"[MAIN] Reloading the loop...")
+    
+    print(f"\t[MAIN] Stopping the loop...")
+    if check_reminders.is_running():
+        print(f"\t[MAIN] Loop is running!")
+        check_reminders.cancel()
+    else:
+        print(f"\t[MAIN] Loop is not running!")
+        return
+    
+    print(f"\t[MAIN] Loop stopped!")
+
+    print(f"\t[MAIN] Restarting the loop...")
     check_reminders.start()
+    print(f"\t[MAIN] Loop restarted!")
+
     await msg.edit("Reloaded the loop!", ephemeral=True)
-    print(f"[MAIN] Reloaded the loop!")
+    print(f"[MAIN] Bot Reloaded!")
 
 bot.run(os.getenv("TOKEN"))

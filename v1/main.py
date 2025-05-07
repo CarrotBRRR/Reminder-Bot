@@ -329,6 +329,7 @@ async def check_reminders():
     """
     print("[REMI] Checking reminders...")
     now = datetime.now().strftime("%H:%M")
+    print(f"\t[REMI] Current time: {now}")
     for guild in bot.guilds:
         reminders = await load_reminders(guild.id)
         for reminder in reminders:
@@ -337,9 +338,8 @@ async def check_reminders():
             if reminder["repeat"] is not None:
                 reminder_time = datetime.strptime(reminder["time"], "%H:%M")
                 now_time = datetime.strptime(now, "%H:%M")
-                print(f"\t[DEBUG] Reminder time: {reminder_time}, Now time: {now_time}")
                 if reminder_time < now_time:
-                    print(f"\t[REMI] Reminder time is in the past!")
+                    print(f"\t[REMI] Reminder {reminder['reminder_id']} is in the past!")
                     delta = now_time - reminder_time
                     repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1
                     reminder_time += timedelta(minutes=reminder["repeat"] * repeats_passed)
@@ -353,7 +353,7 @@ async def check_reminders():
             else: 
                 # If the reminder is not set to repeat, do it now, and remove it later
                 if datetime.strptime(reminder["time"], "%H:%M") < datetime.strptime(now, "%H:%M"):
-                    print(f"\t[REMI] Reminder time is in the past! No Repeat set.")
+                    print(f"\t[REMI] Reminder time is in the past! No Repeat set. Doing Reminder now.")
                     reminder["time"] = now
 
             if reminder["time"] == now:

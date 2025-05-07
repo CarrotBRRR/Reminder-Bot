@@ -1,15 +1,12 @@
-import json
+import json, datetime
 import base64
 
-test_obj = {
-    "id": None,
-    "issuer_id": 123456789012345678,
-}
-
-with open("test.json", "w") as f:
-    json.dump(test_obj, f, indent=4)
-
-with open("test.json", "r") as f:
-    data = json.load(f)
-    print(data["id"])
-    print(data["issuer_id"])
+datetime_str = "12:00"
+# Start today at the given time
+datetime_obj = datetime.datetime.strptime(datetime_str, "%H:%M")
+datetime_obj = datetime_obj.replace(
+    year=datetime.datetime.now().year,
+    month=datetime.datetime.now().month,
+    day=datetime.datetime.now().day,
+)
+print(datetime_obj)

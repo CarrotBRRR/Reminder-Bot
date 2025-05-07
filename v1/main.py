@@ -146,7 +146,7 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
 )
 async def create_reminder(
     ctx : commands.Context,
-    time : typing.Optional[str] = datetime.now().strftime("%H:%M"), # Inital time to remind
+    time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M"), # Inital time to remind
     title : str = "",                                               # Title of the reminder
     subtitles : str = "",                                           # Subtitle of the reminder
     messages : str = "",                                             # Message to send
@@ -180,6 +180,14 @@ async def create_reminder(
         await ctx.send("The number of subtitles and messages must be the same!", ephemeral=True)
         return
     
+    # Adding date info to the time string
+    t = datetime.strptime(time, "%y-%m-%d-%H:%M")
+    t = t.replace(
+        year=datetime.now().year,
+        month=datetime.now().month,
+        day=datetime.now().day,
+    )
+    
     print(f"\t\t[MAIN] Done!")
     print(f"\t\t[MAIN] Parsing repeat time...")
     repeat_seconds = await time2seconds(ctx, repeat) if repeat else None
@@ -192,7 +200,7 @@ async def create_reminder(
         "channel_id": ctx.channel.id,
         "reminder_id": base64.b64encode(uuid.uuid4().bytes).decode('utf-8').strip("=="),
 
-        "time": datetime.strptime(time, "%H:%M").strftime("%H:%M"),
+        "time": t.strftime("%y-%m-%d-%H:%M"),
         "title": title,
         "subtitles": subtitles,
         "message": message,
@@ -329,7 +337,7 @@ async def check_reminders():
     Check reminders every minute
     """
     print("[REMI] Checking reminders...")
-    now = datetime.now().strftime("%H:%M")
+    now = datetime.now().strftime("%y-%m-%d-%H:%M")
     print(f"\t[REMI] Current time: {now}")
     for guild in bot.guilds:
         reminders = await load_reminders(guild.id)
@@ -337,14 +345,14 @@ async def check_reminders():
             # If reminder is in the past
             # If the reminder is set to repeat, add the repeat time (minutes) to the reminder
             if reminder["repeat"] is not None:
-                reminder_time = datetime.strptime(reminder["time"], "%H:%M")
-                now_time = datetime.strptime(now, "%H:%M")
+                reminder_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M")
+                now_time = datetime.strptime(now, "%y-%m-%d-%H:%M")
                 if reminder_time < now_time:
                     print(f"\t[REMI] Reminder {reminder['reminder_id']} is in the past!")
                     delta = now_time - reminder_time
                     repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1
                     reminder_time += timedelta(minutes=reminder["repeat"] * repeats_passed)
-                    reminder["time"] = reminder_time.strftime("%H:%M")
+                    reminder["time"] = reminder_time.strftime("%y-%m-%d-%H:%M")
                     print(f"\t[REMI] Reminder time updated to: {reminder['time']}")
 
                     # Save the new reminder
@@ -353,7 +361,7 @@ async def check_reminders():
 
             else: 
                 # If the reminder is not set to repeat, do it now, and remove it later
-                if datetime.strptime(reminder["time"], "%H:%M") < datetime.strptime(now, "%H:%M"):
+                if datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") < datetime.strptime(now, "%y-%m-%d-%H:%M"):
                     print(f"\t[REMI] Reminder time is in the past! No Repeat set. Doing Reminder now.")
                     reminder["time"] = now
 
@@ -395,7 +403,7 @@ async def check_reminders():
 
                 # If the reminder is set to repeat, add the repeat time (minutes) to the reminder      
                 if reminder["repeat"] is not None:
-                    reminder["time"] = datetime.strftime((datetime.strptime(reminder["time"], "%H:%M") + timedelta(minutes=reminder["repeat"])), "%H:%M")
+                    reminder["time"] = datetime.strftime((datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])), "%y-%m-%d-%H:%M")
 
                 else:
                     # If the reminder is not set to repeat, remove it from the list

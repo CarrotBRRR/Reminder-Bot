@@ -339,6 +339,7 @@ async def check_reminders():
                 now_time = datetime.strptime(now, "%H:%M")
                 print(f"\t[DEBUG] Reminder time: {reminder_time}, Now time: {now_time}")
                 if reminder_time < now_time:
+                    print(f"\t[DEBUG] Reminder time is in the past!")
                     delta = now_time - reminder_time
                     repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1
                     reminder_time += timedelta(minutes=reminder["repeat"] * repeats_passed)

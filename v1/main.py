@@ -376,6 +376,7 @@ async def check_reminders():
                     repeats_passed = int(delta_min // reminder["repeat"]) + 1
                     new_time = reminder_time + timedelta(minutes=repeats_passed * reminder["repeat"])
                     reminder["time"] = new_time.strftime("%y-%m-%d-%H:%M")
+                    
                     print(f"\t[REMI] Reminder time updated to: {reminder['time']}")
                     updated = True
 
@@ -385,11 +386,13 @@ async def check_reminders():
                     print(f"\t[REMI] No repeat set. Removing reminder {reminder['reminder_id']} from {guild.name}")
                     reminders.remove(reminder)
                     updated = True
+
                 elif not late:
                     # Regular (non-late) repeating reminder; update time
                     next_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])
                     reminder["time"] = next_time.strftime("%y-%m-%d-%H:%M")
                     updated = True
+
                 elif reminder["repeat"] is None:
                     print(f"\t[REMI] Reminder {reminder['reminder_id']} was late.")
 

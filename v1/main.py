@@ -344,11 +344,13 @@ async def check_reminders():
             # If reminder is in the past
             # If the reminder is set to repeat, add the repeat time (minutes) to the reminder
             do_reminder = False
+            late = False
             if reminder["repeat"] is not None:
                 reminder_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M")
                 now_time = datetime.strptime(now, "%y-%m-%d-%H:%M")
                 if reminder_time < now_time:
                     do_reminder = True
+                    late = True
                     print(f"\t[REMI] Reminder {reminder['reminder_id']} is in the past!")
                     delta = now_time - reminder_time
                     repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1
@@ -401,19 +403,20 @@ async def check_reminders():
                 # Send the message
                 await channel.send(f"{payload}", embed=em)
                 print(f"\t[REMI] Sent reminder to {channel.name} - {channel.id} in {guild.name} - {guild.id}")
-
-                # If the reminder is set to repeat, add the repeat time (minutes) to the reminder      
-                if reminder["repeat"] is not None:
-                    reminder["time"] = datetime.strftime((datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])), "%y-%m-%d-%H:%M")
-
-                else:
-                    # If the reminder is not set to repeat, remove it from the list
-                    print(f"\t[REMI] No repeat set. Removing reminder {reminder['reminder_id']} from {guild.name}")
-                    reminders.remove(reminder)
                 
-                # Save new
-                with open(f"data/{guild.id}/reminders.json", "w") as f:
-                    json.dump(reminders, f, indent=4)
+                if not late:
+                    # If the reminder is set to repeat, add the repeat time (minutes) to the reminder      
+                    if reminder["repeat"] is not None:
+                        reminder["time"] = datetime.strftime((datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])), "%y-%m-%d-%H:%M")
+
+                    else:
+                        # If the reminder is not set to repeat, remove it from the list
+                        print(f"\t[REMI] No repeat set. Removing reminder {reminder['reminder_id']} from {guild.name}")
+                        reminders.remove(reminder)
+                    
+                    # Save new
+                    with open(f"data/{guild.id}/reminders.json", "w") as f:
+                        json.dump(reminders, f, indent=4)
 
     print("[REMI] Finished checking reminders!")
 

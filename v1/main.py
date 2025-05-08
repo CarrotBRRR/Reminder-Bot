@@ -132,6 +132,24 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     print(f"\t[MAIN] Loaded {len(reminders)} reminders for {guild_id}!")
     return reminders
 
+async def send_reminder(reminder, guild):
+    """
+    Sends the reminder message with embed formatting.
+    """
+    print(f"\t[REMI] Sending reminder {reminder['reminder_id']} in {guild.name}")
+    channel = bot.get_channel(reminder["channel_id"])
+    payload = " ".join(reminder["mentions"])
+
+    embed = dc.Embed(title=reminder["title"], color=0x00ff00)
+    subtitles = reminder["subtitles"].split("\\n")
+    messages = reminder["message"].split("\\n")
+
+    for subtitle, message in zip(subtitles, messages):
+        embed.add_field(name=subtitle, value=message, inline=False)
+
+    await channel.send(content=payload, embed=embed)
+    print(f"\t[REMI] Sent reminder to {channel.name} - {channel.id} in {guild.name} - {guild.id}")
+
 # COMMANDS
 @bot.hybrid_command(
     name="remind",
@@ -336,87 +354,48 @@ async def check_reminders():
     Check reminders every minute
     """
     print("[REMI] Checking reminders...")
-    now = datetime.now().strftime("%y-%m-%d-%H:%M")
-    print(f"\t[REMI] Current time: {now}")
+    now_str = datetime.now().strftime("%y-%m-%d-%H:%M")
+    now_dt = datetime.strptime(now_str, "%y-%m-%d-%H:%M")
+    print(f"\t[REMI] Current time: {now_str}")
+
     for guild in bot.guilds:
         reminders = await load_reminders(guild.id)
-        for reminder in reminders:
-            # If reminder is in the past
-            # If the reminder is set to repeat, add the repeat time (minutes) to the reminder
-            do_reminder = False
-            late = False
-            if reminder["repeat"] is not None:
-                reminder_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M")
-                now_time = datetime.strptime(now, "%y-%m-%d-%H:%M")
-                if reminder_time < now_time:
-                    do_reminder = True
-                    late = True
-                    print(f"\t[REMI] Reminder {reminder['reminder_id']} is in the past!")
-                    delta = now_time - reminder_time
-                    repeats_passed = (delta.total_seconds() // 60) // reminder["repeat"] + 1
-                    reminder_time += timedelta(minutes=reminder["repeat"] * repeats_passed)
-                    reminder["time"] = reminder_time.strftime("%y-%m-%d-%H:%M")
+        updated = False
+
+        for reminder in reminders[:]:  # Use a slice to avoid modifying the list during iteration
+            reminder_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M")
+            late = reminder_time < now_dt
+            do_reminder = late
+
+            if late:
+                print(f"\t[REMI] Reminder {reminder['reminder_id']} is in the past!")
+
+                if reminder["repeat"] is not None:
+                    # Calculate how many repeats have passed and update time accordingly
+                    delta_min = (now_dt - reminder_time).total_seconds() // 60
+                    repeats_passed = int(delta_min // reminder["repeat"]) + 1
+                    new_time = reminder_time + timedelta(minutes=repeats_passed * reminder["repeat"])
+                    reminder["time"] = new_time.strftime("%y-%m-%d-%H:%M")
                     print(f"\t[REMI] Reminder time updated to: {reminder['time']}")
-
-                    # Save the new reminder
-                    with open(f"data/{guild.id}/reminders.json", "w") as f:
-                        json.dump(reminders, f, indent=4)
-
-            else: 
-                # If the reminder is not set to repeat, do it now, and remove it later
-                if datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") < datetime.strptime(now, "%y-%m-%d-%H:%M"):
-                    print(f"\t[REMI] Reminder time is in the past! No Repeat set. Doing Reminder now.")
-                    do_reminder = True
+                    updated = True
 
             if do_reminder:
-                print(f"\t[REMI] {now} Reminder found by {reminder['issuer_id']} in {guild.name}")
-                channel = bot.get_channel(reminder["channel_id"])
+                await send_reminder(reminder, guild)
+                if reminder["repeat"] is None:
+                    print(f"\t[REMI] No repeat set. Removing reminder {reminder['reminder_id']} from {guild.name}")
+                    reminders.remove(reminder)
+                    updated = True
+                elif not late:
+                    # Regular (non-late) repeating reminder; update time
+                    next_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])
+                    reminder["time"] = next_time.strftime("%y-%m-%d-%H:%M")
+                    updated = True
+                elif reminder["repeat"] is None:
+                    print(f"\t[REMI] Reminder {reminder['reminder_id']} was late.")
 
-                # Add the mentions to the message
-                payload = ""
-                for mention in reminder["mentions"]:
-                    payload += f"{mention} "
-                
-                # Create the embed
-                em = dc.Embed(
-                    title=reminder["title"],
-                    color=0x00ff00,
-                )
-
-                # Parse Subtitles and Messages
-                subtitles = []
-                for subtitle in reminder["subtitles"].split("\\n"):
-                    subtitles.append(subtitle)
-
-                messages = []
-                for message in reminder["message"].split("\\n"):
-                    messages.append(message)
-                    
-                # Add the subtitles and messages to the embed
-                for i, subtitle in enumerate(subtitles):
-                    em.add_field(
-                        name=subtitle,
-                        value=messages[i],
-                        inline=False,
-                    )
-                
-                # Send the message
-                await channel.send(f"{payload}", embed=em)
-                print(f"\t[REMI] Sent reminder to {channel.name} - {channel.id} in {guild.name} - {guild.id}")
-                
-                if not late:
-                    # If the reminder is set to repeat, add the repeat time (minutes) to the reminder      
-                    if reminder["repeat"] is not None:
-                        reminder["time"] = datetime.strftime((datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])), "%y-%m-%d-%H:%M")
-
-                    else:
-                        # If the reminder is not set to repeat, remove it from the list
-                        print(f"\t[REMI] No repeat set. Removing reminder {reminder['reminder_id']} from {guild.name}")
-                        reminders.remove(reminder)
-                    
-                    # Save new
-                    with open(f"data/{guild.id}/reminders.json", "w") as f:
-                        json.dump(reminders, f, indent=4)
+        if updated:
+            with open(f"data/{guild.id}/reminders.json", "w") as f:
+                json.dump(reminders, f, indent=4)
 
     print("[REMI] Finished checking reminders!")
 

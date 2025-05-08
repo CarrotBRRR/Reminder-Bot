@@ -418,28 +418,4 @@ async def sync(ctx : commands.Context):
     await msg.edit(content="Synced the tree!", delete_after=2)
     print(f"[MAIN] Synced the tree!")
 
-@bot.command(
-    name="reload",
-    description="Reloads the reminder loop",
-)
-@commands.is_owner()
-async def reload(ctx: commands.Context):
-    """
-    Reload the reminder loop
-    """
-    msg = await ctx.send("Reloading...", ephemeral=True)
-    print("[MAIN] Reloading the reminder loop...")
-
-    if check_reminders.is_running():
-        print("\t[MAIN] Stopping the reminder loop...")
-        check_reminders.stop()
-        print("\t[MAIN] Reminder loop stopped!")
-
-    print("\t[MAIN] Starting the reminder loop...")
-    check_reminders.start()
-    print("\t[MAIN] Reminder loop started!")
-
-    await msg.edit(content="Reloaded the reminder loop!", delete_after=2)
-    print("[MAIN] Reminder loop reloaded!")
-
 bot.run(os.getenv("TOKEN"))

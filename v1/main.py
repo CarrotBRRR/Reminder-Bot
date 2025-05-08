@@ -365,7 +365,7 @@ async def check_reminders():
         for reminder in reminders[:]:  # Use a slice to avoid modifying the list during iteration
             reminder_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M")
             late = reminder_time < now_dt
-            do_reminder = late
+            do_reminder = late or reminder_time == now_dt
 
             if late:
                 print(f"\t[REMI] Reminder {reminder['reminder_id']} is in the past!")
@@ -376,7 +376,7 @@ async def check_reminders():
                     repeats_passed = int(delta_min // reminder["repeat"]) + 1
                     new_time = reminder_time + timedelta(minutes=repeats_passed * reminder["repeat"])
                     reminder["time"] = new_time.strftime("%y-%m-%d-%H:%M")
-                    
+
                     print(f"\t[REMI] Reminder time updated to: {reminder['time']}")
                     updated = True
 

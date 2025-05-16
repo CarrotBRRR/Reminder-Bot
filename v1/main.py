@@ -1,4 +1,4 @@
-import os, json, re, uuid, base64
+import os, json, re, uuid, base64, requests
 import discord as dc
 import typing
 
@@ -346,7 +346,6 @@ async def test_reminder(
 
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
 
-
 # TASKS
 @tasks.loop(seconds=60)
 async def check_reminders():
@@ -401,6 +400,25 @@ async def check_reminders():
                 json.dump(reminders, f, indent=4)
 
     print("[REMI] Finished checking reminders!")
+
+@tasks.loop(minutes=15)
+async def send_heartbeat():
+    """
+    Send a heartbeat to the healthcheck.io every 15 minutes
+    """
+    print("[MAIN] Sending heartbeat to healthcheck.io...")
+    heartbeat_uuid = os.getenv("HEARTBEAT_UUID")
+
+    try:
+        response = requests.get(f"https://hc-ping.com/{heartbeat_uuid}")
+        if response.status_code == 200:
+            print("[MAIN] Heartbeat sent successfully!")
+        else:
+            print(f"[MAIN] Failed to send heartbeat: {response.status_code} - {response.text}")
+
+    except Exception as e:
+        # Optional: local logging of the failure
+        print(f"[MAIN] Failed to send ping: {e}")
 
 # OWNER COMMANDS
 @bot.command(

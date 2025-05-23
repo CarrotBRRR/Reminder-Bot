@@ -40,12 +40,17 @@ async def on_ready():
 
     print(f"[INIT] Found {len(bot.guilds)} Guilds!")
 
-    # Start the reminder loop
+    # Start the tasks
+    print("\t[INIT] Starting task loops...")
     if not check_reminders.is_running():
-        print("[REMI] Waiting for minute time...")
-        await dc.utils.sleep_until(datetime.now() + timedelta(seconds=60 - datetime.now().second))
+        print("\t[INIT] Waiting for minute time...")
+        await dc.utils.sleep_until(datetime.now() + timedelta(seconds=60 - datetime.now().second)) # Wait for the next minute
         check_reminders.start()
-        print("[INIT] Started reminder loop!")
+        print("\t[INIT] Started reminder loop!")
+
+    if not send_heartbeat.is_running():
+        send_heartbeat.start()
+        print("\t[INIT] Started heartbeat loop!")
 
 @bot.event
 async def on_message(message : dc.Message):
@@ -98,6 +103,36 @@ async def time2seconds(ctx, duration_str : str) -> int:
         total_seconds += int(value) * time_factors[unit]
 
     return total_seconds
+
+def parse_flexible_time(time_str: str) -> datetime:
+    formats = [
+        "%y-%m-%d-%H:%M",
+        "%m-%d-%H:%M",
+        "%d-%H:%M",
+        "%H:%M"
+    ]
+    
+    now = datetime.now()
+    
+    for fmt in formats:
+        try:
+            parsed = datetime.strptime(time_str, fmt)
+
+            if fmt == "%H:%M":
+                parsed = parsed.replace(year=now.year, month=now.month, day=now.day)
+
+            elif fmt == "%d-%H:%M":
+                parsed = parsed.replace(year=now.year, month=now.month)
+
+            elif fmt == "%m-%d-%H:%M":
+                parsed = parsed.replace(year=now.year)
+
+            return parsed
+        
+        except ValueError:
+            continue
+
+    raise ValueError(f"Time format not recognized: '{time_str}'")
 
 async def get_mentions(mentions : str, guild : dc.Guild) -> typing.List[dc.User | dc.Role]:
     """
@@ -165,9 +200,9 @@ async def create_reminder(
     ctx : commands.Context,
     time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M"), # Inital time to remind
     title : str = "",                                               # Title of the reminder
-    subtitles : str = "",                                           # Subtitle of the reminder
-    messages : str = "",                                             # Message to send
-    mentions : str = "",                                            # Mentions to send the reminder to
+    subtitles : typing.Optional[str] = "",                                           # Subtitle of the reminder
+    messages : typing.Optional[str] = "",                                             # Message to send
+    mentions : typing.Optional[str] = "",                                            # Mentions to send the reminder to
     repeat : typing.Optional[str] = None,                           # Interval to repeat the reminder in the same format as time (i.e. amount of time to add)
 ):
     """
@@ -198,13 +233,13 @@ async def create_reminder(
         return
     
     # Adding date info to the time string
-    t = datetime.strptime(time, "%H:%M")
-    t = t.replace(
-        year=datetime.now().year,
-        month=datetime.now().month,
-        day=datetime.now().day,
-    )
-    
+    try:
+        t = parse_flexible_time(time)
+
+    except ValueError as e:
+        await ctx.send(str(e), ephemeral=True)
+        return
+
     print(f"\t\t[MAIN] Done!")
     print(f"\t\t[MAIN] Parsing repeat time...")
     repeat_seconds = await time2seconds(ctx, repeat) if repeat else None

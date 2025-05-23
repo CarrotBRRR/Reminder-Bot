@@ -134,6 +134,16 @@ def parse_flexible_time(time_str: str) -> datetime:
 
     raise ValueError(f"Time format not recognized: '{time_str}'")
 
+def uuid_base62():
+    alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    u = uuid.uuid4()
+    num = int.from_bytes(u.bytes, byteorder='big')  # 128-bit int
+    base62 = ''
+    while num:
+        num, rem = divmod(num, 62)
+        base62 = alphabet[rem] + base62
+    return base62
+
 async def get_mentions(mentions : str, guild : dc.Guild) -> typing.List[dc.User | dc.Role]:
     """
     Get mentions from a string
@@ -250,7 +260,7 @@ async def create_reminder(
         "issuer_id": ctx.author.id,
         "guild_id": ctx.guild.id,
         "channel_id": ctx.channel.id,
-        "reminder_id": base64.b64encode(uuid.uuid4().bytes).decode('utf-8').strip("=="),
+        "reminder_id": uuid_base62(),
 
         "time": t.strftime("%y-%m-%d-%H:%M"),
         "title": title,

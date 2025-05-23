@@ -441,7 +441,7 @@ async def send_heartbeat():
     """
     Send a heartbeat to the healthcheck.io every 15 minutes
     """
-    print("[MAIN] Sending heartbeat to healthcheck.io...")
+    print("[MAIN] Sending heartbeat to healthchecks.io...")
     heartbeat_uuid = os.getenv("HEARTBEAT_UUID")
 
     try:

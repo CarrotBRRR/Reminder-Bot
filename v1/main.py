@@ -104,6 +104,32 @@ async def time2seconds(ctx, duration_str : str) -> int:
 
     return total_seconds
 
+async def seconds2time(seconds: int) -> str:
+    """
+    Converts seconds to a human-readable time format
+    """
+    if seconds < 0:
+        return "Invalid time"
+
+    time_parts = []
+    time_units = {
+        'y': 31556952,  # 1 year
+        'mo': 2629746,  # 1 month
+        'w': 604800,    # 1 week
+        'd': 86400,     # 1 day
+        'h': 3600,      # 1 hour
+        'm': 60,        # 1 minute
+        's': 1          # 1 second
+    }
+
+    for unit, factor in time_units.items():
+        if seconds >= factor:
+            value = seconds // factor
+            seconds %= factor
+            time_parts.append(f"{value}{unit}")
+
+    return " ".join(time_parts) if time_parts else "0s"
+
 def parse_flexible_time(time_str: str) -> datetime:
     formats = [
         "%y-%m-%d-%H:%M",
@@ -208,12 +234,12 @@ async def send_reminder(reminder, guild):
 )
 async def create_reminder(
     ctx : commands.Context,
-    time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M"), # Inital time to remind
-    title : str = "",                                               # Title of the reminder
-    subtitles : typing.Optional[str] = "",                                           # Subtitle of the reminder
-    messages : typing.Optional[str] = "",                                             # Message to send
-    mentions : typing.Optional[str] = "",                                            # Mentions to send the reminder to
-    repeat : typing.Optional[str] = None,                           # Interval to repeat the reminder in the same format as time (i.e. amount of time to add)
+    time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M"),    # Inital time to remind
+    title : str = "",                                                           # Title of the reminder
+    subtitles : typing.Optional[str] = "",                                      # Subtitle of the reminder
+    messages : typing.Optional[str] = "",                                       # Message to send
+    mentions : typing.Optional[str] = "",                                       # Mentions to send the reminder to
+    repeat : typing.Optional[str] = None,                                       # Interval to repeat the reminder in the same format as time (i.e. amount of time to add)
 ):
     """
     Create a reminder!
@@ -230,6 +256,9 @@ async def create_reminder(
     
     print(f"\t\t[MAIN] Done!")
     print(f"\t\t[MAIN] Parsing Subtitles and Messages...")
+
+    # This does nothing when the string is empty, will fix later
+    # New function should only need to check if there are more messages than subtitles
     subs = []
     for subtitle in subtitles.split("\n"):
         subs.append(subtitle)
@@ -306,10 +335,12 @@ async def list_reminders(ctx : commands.Context):
             inline=False,
         )
     else:
+        value_str = f"> `Next Reminder at`: {reminders[0]['time']}\n> `Title`: {reminders[0]['title']}\n> `ID`: {reminders[0]['reminder_id']}\n> `Repeat every` {seconds2time(reminders[0]['repeat'] * 60) if reminders[0]['repeat'] else 'No Repeat'}"
+
         for reminder in reminders:
             em.add_field(
                 name=f"**Reminder for {reminder['issuer_id']}**",
-                value=f"> `Next Reminder at`: {reminder['time']}\n> `Title`: {reminder['title']}\n> `ID`: {reminder['reminder_id']}",
+                value= value_str,
                 inline=False,
             )
     

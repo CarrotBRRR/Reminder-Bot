@@ -539,4 +539,4 @@ async def sync(ctx : commands.Context):
     await msg.edit(content="Synced the tree!", delete_after=2)
     print(f"[MAIN] Synced the tree!")
 
-bot.run(os.getenv("TEST_TOKEN"))
+bot.run(os.getenv("TOKEN"))

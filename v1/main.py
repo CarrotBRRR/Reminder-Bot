@@ -144,7 +144,9 @@ def parse_flexible_time(time_str: str) -> datetime:
             return datetime.strptime(adjusted_str, fmt)
         
         except ValueError:
-            raise ValueError(f"Time format not recognized: '{time_str}'")
+            continue
+
+    raise ValueError(f"Time format not recognized: '{time_str}'")
 
 async def time2unix(datetime_str: str) -> int:
     """
@@ -436,10 +438,14 @@ async def bot_time(
     ctx : commands.Context, 
     time : typing.Optional[str] = None
 ):
+    await ctx.defer(ephemeral=True)
+    
     try:
         if time is None:
             time = datetime.now().strftime("%y-%m-%d-%H:%M")
+
         datetime_obj = parse_flexible_time(time)
+
     except ValueError as e:
         await ctx.send(str(e), ephemeral=True)
         return

@@ -351,7 +351,8 @@ async def list_reminders(ctx : commands.Context):
 
             mentions_str = ""
             for mention in reminder["mentions"]:
-                mentions_str += f"<@{mention}> "
+                
+                mentions_str += f"{mention} "
 
             em.add_field(
                 name=f"**Reminder for {mentions_str}**",

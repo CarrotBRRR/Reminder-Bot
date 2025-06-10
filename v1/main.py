@@ -344,7 +344,7 @@ async def list_reminders(ctx : commands.Context):
         )
     else:
         for reminder in reminders:
-            value_str = f"> `Next Reminder`: {reminder['time']}\n> \t(Local Time: <t:{str(await time2unix(reminder['time']))}:F>)\n> `Title`: {reminders[0]['title']}\n> `ID`: {reminders[0]['reminder_id']}\n> `Repeat every` {await seconds2time(reminders[0]['repeat'] * 60) if reminders[0]['repeat'] else 'No Repeat'}"
+            value_str = f"> `Next Reminder`: {reminder['time']}\n> `Local Time`: <t:{str(await time2unix(reminder['time']))}:F>)\n> `Title`: {reminders[0]['title']}\n> `ID`: {reminders[0]['reminder_id']}\n> `Repeat every` {await seconds2time(reminders[0]['repeat'] * 60) if reminders[0]['repeat'] else 'No Repeat'}"
 
             em.add_field(
                 name=f"**Reminder for {reminder['issuer_id']}**",

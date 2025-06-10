@@ -433,7 +433,7 @@ async def test_reminder(
 @bot.hybrid_command(
     name="BotTime",
     description="Get the time of the bot",
-    time= "Time in UTC to convert to your local time 'HH:MM' or 'MM-DD-HH:MM' or 'DD-HH:MM' or 'YY-MM-DD-HH:MM'",
+    # time="Time in UTC to convert to your local time 'HH:MM' or 'MM-DD-HH:MM' or 'DD-HH:MM' or 'YY-MM-DD-HH:MM'",
 )
 async def bot_time(
     ctx : commands.Context, 
@@ -539,4 +539,4 @@ async def sync(ctx : commands.Context):
     await msg.edit(content="Synced the tree!", delete_after=2)
     print(f"[MAIN] Synced the tree!")
 
-bot.run(os.getenv("TOKEN"))
+bot.run(os.getenv("TEST_TOKEN"))

@@ -132,16 +132,18 @@ async def seconds2time(seconds: int) -> str:
 
 def parse_flexible_time(time_str: str) -> datetime:
     now = datetime.now()
-    formats = {
-        "%y-%m-%d-%H:%M": time_str,
-        "%m-%d-%H:%M": f"{now.year}-{time_str}",
-        "%d-%H:%M": f"{now.year}-{now.month:02d}-{time_str}",
-        "%H:%M": f"{now.year}-{now.month:02d}-{now.day:02d}-{time_str}",
-    }
 
-    for fmt, adjusted_str in formats.items():
+    formats = [
+        ("%y-%m-%d-%H:%M", time_str),                                               # %y-%m-%d-%H:%M
+        ("%Y-%m-%d-%H:%M", time_str),                                               # %Y-%m-%d-%H:%M
+        ("%Y-%m-%d-%H:%M", f"{now.year}-{time_str}"),                               # %m-%d-%H:%M
+        ("%Y-%m-%d-%H:%M", f"{now.year}-{now.month:02d}-{time_str}"),               # %d-%H:%M
+        ("%Y-%m-%d-%H:%M", f"{now.year}-{now.month:02d}-{now.day:02d}-{time_str}")  # %H:%M
+    ]
+
+    for fmt, time_candidate in formats:
         try:
-            return datetime.strptime(adjusted_str, fmt)
+            return datetime.strptime(time_candidate, fmt)
         
         except ValueError:
             continue
@@ -439,7 +441,7 @@ async def bot_time(
     time : typing.Optional[str] = None
 ):
     await ctx.defer(ephemeral=True)
-    
+
     try:
         if time is None:
             time = datetime.now().strftime("%y-%m-%d-%H:%M")

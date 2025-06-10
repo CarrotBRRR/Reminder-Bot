@@ -1,3 +1,4 @@
+cls
 @echo off
 echo ----------------- Checking for Updates ----------------
 git pull origin main

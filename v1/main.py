@@ -455,7 +455,7 @@ async def bot_time(
     
     time_int = int(datetime_obj.timestamp())
 
-    await ctx.send(f"## {datetime_obj.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True)
+    await ctx.send(f"## {datetime_obj.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True) 
 
 # TASKS
 @tasks.loop(seconds=60)

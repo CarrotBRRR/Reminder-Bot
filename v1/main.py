@@ -349,11 +349,12 @@ async def list_reminders(ctx : commands.Context):
                         \n> `Repeat every` {await seconds2time(reminders[0]['repeat'] * 60) if reminders[0]['repeat'] else 'No Repeat Set'}\
                         \n> `Issuer`: <@{reminder['issuer_id']}>"
 
+            mentions_str = ""
             for mention in reminder["mentions"]:
-                mentions += f"<@{mention}> "
+                mentions_str += f"<@{mention}> "
 
             em.add_field(
-                name=f"**Reminder for {mentions}**",
+                name=f"**Reminder for {mentions_str}**",
                 value= value_str,
                 inline=False,
             )

@@ -343,7 +343,6 @@ async def list_reminders(ctx : commands.Context):
             inline=False,
         )
     else:
-        
         for reminder in reminders:
             value_str = f"> `Next Reminder at`: {reminder['time']} (Local Time: <t:{str(await time2unix(reminder['time']))}:F>)\n> `Title`: {reminders[0]['title']}\n> `ID`: {reminders[0]['reminder_id']}\n> `Repeat every` {await seconds2time(reminders[0]['repeat'] * 60) if reminders[0]['repeat'] else 'No Repeat'}"
 
@@ -430,6 +429,25 @@ async def test_reminder(
             return
 
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
+
+@bot.hybrid_command(
+    name="BotTime",
+    description="Get the time of the bot",
+    time= "Time in UTC to convert to your local time 'HH:MM' or 'MM-DD-HH:MM' or 'DD-HH:MM' or 'YY-MM-DD-HH:MM'",
+)
+async def bot_time(
+    ctx : commands.Context, 
+    time : typing.Optional[str] = datetime.now()
+):
+    try:
+        datetime_obj = parse_flexible_time(time)
+    except ValueError as e:
+        await ctx.send(str(e), ephemeral=True)
+        return
+    
+    time_int = int(datetime_obj.timestamp())
+
+    await ctx.send(f"# {time} UTC (Bot Time) is:\n# <t:{time_int}:F> Your Time)", ephemeral=True)
 
 # TASKS
 @tasks.loop(seconds=60)

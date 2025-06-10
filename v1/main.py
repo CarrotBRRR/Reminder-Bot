@@ -64,18 +64,18 @@ async def on_guild_join(guild : dc.Guild):
     """
     Called when the bot joins a new guild
     """
-    print(f"[MAIN] Joined guild: {guild.name} - {guild.id}")
+    print(f"[REMI] Joined guild: {guild.name} - {guild.id}")
     
     # Create folder for the guild if it doesn't exist
     if not os.path.exists(f"data/{guild.id}"):
         os.makedirs(f"data/{guild.id}")
-        print(f"[MAIN] Created folder for guild: {guild.name} - {guild.id}")
+        print(f"[REMI] Created folder for guild: {guild.name} - {guild.id}")
 
     # Create reminders file if it doesn't exist
     if not os.path.exists(f"data/{guild.id}/reminders.json"):
         with open(f"data/{guild.id}/reminders.json", "w") as f:
             json.dump([], f, indent=4)
-        print(f"[MAIN] Created reminders file for guild: {guild.name} - {guild.id}")
+        print(f"[REMI] Created reminders file for guild: {guild.name} - {guild.id}")
 
 # HELPER FUNCTIONS
 async def time2seconds(ctx, duration_str : str) -> int:
@@ -190,15 +190,14 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     """
     Load reminders from file
     """
-    print(f"\t[MAIN] Loading reminders for {guild_id}...")
     if not os.path.exists(f"data/{guild_id}/reminders.json"):
-        print(f"\t[MAIN] No reminders found for {guild_id}. Creating file...")
+        print(f"\t[REMI] No reminder folder found for {guild_id}. Creating file...")
         return []
 
     with open(f"data/{guild_id}/reminders.json", "r") as f:
         reminders = json.load(f)
 
-    print(f"\t[MAIN] Loaded {len(reminders)} reminders for {guild_id}!")
+    print(f"\t[REMI] Loaded {len(reminders)} reminders for {guild_id}!" if not len(reminders) == 0 else "No reminders found.")
     return reminders
 
 async def send_reminder(reminder, guild):
@@ -244,9 +243,9 @@ async def create_reminder(
     """
     reminders = await load_reminders(ctx.guild.id)
 
-    print(f"[MAIN] {ctx.author.name} creating reminder in {ctx.guild.name}")
-    print(f"\t[MAIN] Parsing info...")
-    print(f"\t\t[MAIN] Parsing mentions...")
+    print(f"[REMI] {ctx.author.name} creating reminder in {ctx.guild.name}")
+    print(f"\t[REMI] Parsing info...")
+    print(f"\t\t[REMI] Parsing mentions...")
     if time is None:
         time = datetime.now().strftime("%y-%m-%d-%H:%M")
 
@@ -255,8 +254,8 @@ async def create_reminder(
     if mention_str is []:
         mention_str = [ctx.author.mention]
     
-    print(f"\t\t[MAIN] Done!")
-    print(f"\t\t[MAIN] Parsing Subtitles and Messages...")
+    print(f"\t\t[REMI] Done!")
+    print(f"\t\t[REMI] Parsing Subtitles and Messages...")
 
     # This does nothing when the string is empty, will fix later
     # New function should only need to check if there are more messages than subtitles
@@ -280,12 +279,12 @@ async def create_reminder(
         await ctx.send(str(e), ephemeral=True)
         return
 
-    print(f"\t\t[MAIN] Done!")
-    print(f"\t\t[MAIN] Parsing repeat time...")
+    print(f"\t\t[REMI] Done!")
+    print(f"\t\t[REMI] Parsing repeat time...")
     repeat_seconds = await time2seconds(ctx, repeat) if repeat else None
-    print(f"\t[MAIN] Finished Parsing info!")
+    print(f"\t[REMI] Finished Parsing info!")
 
-    print(f"\t[MAIN] Creating reminder...")
+    print(f"\t[REMI] Creating reminder...")
     reminders.append({
         "issuer_id": ctx.author.id,
         "guild_id": ctx.guild.id,
@@ -300,17 +299,17 @@ async def create_reminder(
         "repeat": int(repeat_seconds/60) if repeat else None,
     })
 
-    print(f"\t[MAIN] Done!")
-    print(f"\t[MAIN] Saving reminder to file...")
+    print(f"\t[REMI] Done!")
+    print(f"\t[REMI] Saving reminder to file...")
     # Save reminders to file
     if not os.path.exists(f"data/{ctx.guild.id}"):
         os.makedirs(f"data/{ctx.guild.id}")
-        print(f"[MAIN] Created folder for guild: {ctx.guild.name} - {ctx.guild.id}")
+        print(f"[REMI] Created folder for guild: {ctx.guild.name} - {ctx.guild.id}")
 
     with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
         json.dump(reminders, f, indent=4)
-    print(f"\t[MAIN] Reminder Saved!")
-    print(f"\t[MAIN] Reminder ID: {reminders[-1]['reminder_id']} Created!")
+    print(f"\t[REMI] Reminder Saved!")
+    print(f"\t[REMI] Reminder ID: {reminders[-1]['reminder_id']} Created!")
     await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)
 
 @bot.hybrid_command(
@@ -367,7 +366,7 @@ async def delete_reminder(
     """
     Delete a reminder by ID
     """
-    print(f"[MAIN] {ctx.author.name} deleting reminder {reminder_id} in {ctx.guild.name}")
+    print(f"[REMI] {ctx.author.name} deleting reminder {reminder_id} in {ctx.guild.name}")
     reminders = await load_reminders(ctx.guild.id)
 
     for reminder in reminders:
@@ -380,7 +379,7 @@ async def delete_reminder(
             with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
                 json.dump(reminders, f, indent=4)
             await ctx.send("Reminder deleted!", ephemeral=True)
-            print(f"[MAIN] Deleted reminder {reminder_id} in {ctx.guild.name}")
+            print(f"[REMI] Deleted reminder {reminder_id} in {ctx.guild.name}")
             return
 
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
@@ -397,7 +396,7 @@ async def test_reminder(
     """
     Test a reminder
     """
-    print(f"[MAIN] {ctx.author.name} testing reminder {id} in {ctx.guild.name}")
+    print(f"[REMI] {ctx.author.name} testing reminder {id} in {ctx.guild.name}")
     reminders = await load_reminders(ctx.guild.id)
 
     for reminder in reminders:
@@ -426,7 +425,7 @@ async def test_reminder(
                 )
             
             await channel.send(embed=em ,ephemeral=True)
-            print(f"[MAIN] Tested reminder {reminder['reminder_id']} to {channel.name} in {ctx.guild.name}")
+            print(f"[REMI] Tested reminder {reminder['reminder_id']} to {channel.name} in {ctx.guild.name}")
             return
 
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
@@ -516,19 +515,19 @@ async def send_heartbeat():
     """
     Send a heartbeat to the healthcheck.io every 15 minutes
     """
-    print("[MAIN] Sending heartbeat to healthchecks.io...")
+    print("[REMI] Sending heartbeat to healthchecks.io...")
     heartbeat_uuid = os.getenv("HEARTBEAT_UUID")
 
     try:
         response = requests.get(f"https://hc-ping.com/{heartbeat_uuid}")
         if response.status_code == 200:
-            print("[MAIN] Heartbeat sent successfully!")
+            print("[REMI] Heartbeat sent successfully!")
         else:
-            print(f"[MAIN] Failed to send heartbeat: {response.status_code} - {response.text}")
+            print(f"[REMI] Failed to send heartbeat: {response.status_code} - {response.text}")
 
     except Exception as e:
         # Optional: local logging of the failure
-        print(f"[MAIN] Failed to send ping: {e}")
+        print(f"[REMI] Failed to send ping: {e}")
 
 # OWNER COMMANDS
 @bot.command(
@@ -544,6 +543,6 @@ async def sync(ctx : commands.Context):
     await bot.tree.sync()
     await ctx.message.delete()
     await msg.edit(content="Synced the tree!", delete_after=2)
-    print(f"[MAIN] Synced the tree!")
+    print(f"[REMI] Synced the tree!")
 
 bot.run(os.getenv("TOKEN"))

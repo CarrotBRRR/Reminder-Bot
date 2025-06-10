@@ -131,34 +131,20 @@ async def seconds2time(seconds: int) -> str:
     return " ".join(time_parts) if time_parts else "0s"
 
 def parse_flexible_time(time_str: str) -> datetime:
-    formats = [
-        "%y-%m-%d-%H:%M",
-        "%m-%d-%H:%M",
-        "%d-%H:%M",
-        "%H:%M"
-    ]
-    
     now = datetime.now()
-    
-    for fmt in formats:
+    formats = {
+        "%y-%m-%d-%H:%M": time_str,
+        "%m-%d-%H:%M": f"{now.year}-{time_str}",
+        "%d-%H:%M": f"{now.year}-{now.month:02d}-{time_str}",
+        "%H:%M": f"{now.year}-{now.month:02d}-{now.day:02d}-{time_str}",
+    }
+
+    for fmt, adjusted_str in formats.items():
         try:
-            parsed = datetime.strptime(time_str, fmt)
-
-            if fmt == "%H:%M":
-                parsed = parsed.replace(year=now.year, month=now.month, day=now.day)
-
-            elif fmt == "%d-%H:%M":
-                parsed = parsed.replace(year=now.year, month=now.month)
-
-            elif fmt == "%m-%d-%H:%M":
-                parsed = parsed.replace(year=now.year)
-
-            return parsed
+            return datetime.strptime(adjusted_str, fmt)
         
         except ValueError:
-            continue
-
-    raise ValueError(f"Time format not recognized: '{time_str}'")
+            raise ValueError(f"Time format not recognized: '{time_str}'")
 
 async def time2unix(datetime_str: str) -> int:
     """
@@ -242,12 +228,12 @@ async def send_reminder(reminder, guild):
 )
 async def create_reminder(
     ctx : commands.Context,
-    time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M"),    # Inital time to remind
-    title : str = "",                                                           # Title of the reminder
-    subtitles : typing.Optional[str] = "",                                      # Subtitle of the reminder
-    messages : typing.Optional[str] = "",                                       # Message to send
-    mentions : typing.Optional[str] = "",                                       # Mentions to send the reminder to
-    repeat : typing.Optional[str] = None,                                       # Interval to repeat the reminder in the same format as time (i.e. amount of time to add)
+    time : typing.Optional[str] = None,     # Inital time to remind
+    title : str = "",                       # Title of the reminder
+    subtitles : typing.Optional[str] = "",  # Subtitle of the reminder
+    messages : typing.Optional[str] = "",   # Message to send
+    mentions : typing.Optional[str] = "",   # Mentions to send the reminder to
+    repeat : typing.Optional[str] = None,   # Interval to repeat the reminder in the same format as time (i.e. amount of time to add)
 ):
     """
     Create a reminder!
@@ -257,6 +243,9 @@ async def create_reminder(
     print(f"[MAIN] {ctx.author.name} creating reminder in {ctx.guild.name}")
     print(f"\t[MAIN] Parsing info...")
     print(f"\t\t[MAIN] Parsing mentions...")
+    if time is None:
+        time = datetime.now().strftime("%y-%m-%d-%H:%M")
+
     mention_str = await get_mentions(mentions, ctx.guild)
 
     if mention_str is []:
@@ -445,9 +434,11 @@ async def test_reminder(
 )
 async def bot_time(
     ctx : commands.Context, 
-    time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M") 
+    time : typing.Optional[str] = None
 ):
     try:
+        if time is None:
+            time = datetime.now().strftime("%y-%m-%d-%H:%M")
         datetime_obj = parse_flexible_time(time)
     except ValueError as e:
         await ctx.send(str(e), ephemeral=True)

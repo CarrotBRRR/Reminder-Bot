@@ -41,7 +41,7 @@ async def on_ready():
     print(f"[INIT] Found {len(bot.guilds)} Guilds!")
 
     # Start the tasks
-    print("\t[INIT] Starting task loops...")
+    print("[INIT] Starting task loops...")
     if not check_reminders.is_running():
         print("\t[INIT] Waiting for minute time...")
         await dc.utils.sleep_until(datetime.now() + timedelta(seconds=60 - datetime.now().second)) # Wait for the next minute
@@ -51,6 +51,8 @@ async def on_ready():
     if not send_heartbeat.is_running():
         send_heartbeat.start()
         print("\t[INIT] Started heartbeat loop!")
+    
+    print("[INIT] Loops Started!")
 
 @bot.event
 async def on_message(message : dc.Message):
@@ -197,7 +199,9 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     with open(f"data/{guild_id}/reminders.json", "r") as f:
         reminders = json.load(f)
 
-    print(f"\t[REMI] Loaded {len(reminders)} reminders for {guild_id}!" if not len(reminders) == 0 else "No reminders found.")
+    if not len(reminders) == 0:
+        print(f"\t[REMI] Loaded {len(reminders)} reminders for {guild_id}!")
+    
     return reminders
 
 async def send_reminder(reminder, guild):

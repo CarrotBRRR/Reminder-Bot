@@ -433,11 +433,10 @@ async def test_reminder(
 @bot.hybrid_command(
     name="bottime",
     description="Get the time of the bot",
-    time="Time in UTC to convert to your local time 'HH:MM' or 'MM-DD-HH:MM' or 'DD-HH:MM' or 'YY-MM-DD-HH:MM'",
 )
 async def bot_time(
     ctx : commands.Context, 
-    time : typing.Optional[str] = datetime.now()
+    time : typing.Optional[str] = datetime.now() # Time in UTC to convert to your local time 'HH:MM' or 'MM-DD-HH:MM' or 'DD-HH:MM' or 'YY-MM-DD-HH:MM'
 ):
     try:
         datetime_obj = parse_flexible_time(time)

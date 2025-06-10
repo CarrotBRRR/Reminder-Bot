@@ -344,7 +344,7 @@ async def list_reminders(ctx : commands.Context):
         )
     else:
         for reminder in reminders:
-            value_str = f"> `Next Reminder at`: {reminder['time']} (Local Time: <t:{str(await time2unix(reminder['time']))}:F>)\n> `Title`: {reminders[0]['title']}\n> `ID`: {reminders[0]['reminder_id']}\n> `Repeat every` {await seconds2time(reminders[0]['repeat'] * 60) if reminders[0]['repeat'] else 'No Repeat'}"
+            value_str = f"> `Next Reminder`: {reminder['time']}\n> \t(Local Time: <t:{str(await time2unix(reminder['time']))}:F>)\n> `Title`: {reminders[0]['title']}\n> `ID`: {reminders[0]['reminder_id']}\n> `Repeat every` {await seconds2time(reminders[0]['repeat'] * 60) if reminders[0]['repeat'] else 'No Repeat'}"
 
             em.add_field(
                 name=f"**Reminder for {reminder['issuer_id']}**",
@@ -447,7 +447,7 @@ async def bot_time(
     
     time_int = int(datetime_obj.timestamp())
 
-    await ctx.send(f"# {time} UTC (Bot Time) is:\n# <t:{time_int}:F> Your Time)", ephemeral=True)
+    await ctx.send(f"## {time} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True)
 
 # TASKS
 @tasks.loop(seconds=60)

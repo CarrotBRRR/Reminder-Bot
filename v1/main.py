@@ -431,9 +431,9 @@ async def test_reminder(
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
 
 @bot.hybrid_command(
-    name="BotTime",
+    name="bottime",
     description="Get the time of the bot",
-    # time="Time in UTC to convert to your local time 'HH:MM' or 'MM-DD-HH:MM' or 'DD-HH:MM' or 'YY-MM-DD-HH:MM'",
+    time="Time in UTC to convert to your local time 'HH:MM' or 'MM-DD-HH:MM' or 'DD-HH:MM' or 'YY-MM-DD-HH:MM'",
 )
 async def bot_time(
     ctx : commands.Context, 

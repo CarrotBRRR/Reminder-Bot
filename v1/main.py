@@ -445,7 +445,7 @@ async def test_reminder(
 )
 async def bot_time(
     ctx : commands.Context, 
-    time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M") # 
+    time : typing.Optional[str] = datetime.now().strftime("%y-%m-%d-%H:%M") 
 ):
     try:
         datetime_obj = parse_flexible_time(time)
@@ -455,7 +455,7 @@ async def bot_time(
     
     time_int = int(datetime_obj.timestamp())
 
-    await ctx.send(f"## {time} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True)
+    await ctx.send(f"## {datetime_obj.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True)
 
 # TASKS
 @tasks.loop(seconds=60)

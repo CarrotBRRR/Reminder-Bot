@@ -42,14 +42,14 @@ async def on_ready():
 
     # Start the tasks
     print("[INIT] Starting task loops...")
-    if not check_reminders.is_running():
+    if not reminder_task.is_running():
         print("\t[INIT] Waiting for minute time...")
         await dc.utils.sleep_until(datetime.now() + timedelta(seconds=60 - datetime.now().second)) # Wait for the next minute
-        check_reminders.start()
+        reminder_task.start()
         print("\t[INIT] Started reminder loop!")
 
-    if not send_heartbeat.is_running():
-        send_heartbeat.start()
+    if not heartbeat_task.is_running():
+        heartbeat_task.start()
         print("\t[INIT] Started heartbeat loop!")
     
     print("[INIT] Loops Started!")
@@ -133,6 +133,16 @@ async def seconds2time(seconds: int) -> str:
     return " ".join(time_parts) if time_parts else "0s"
 
 def parse_flexible_time(time_str: str) -> datetime:
+    """
+    Parses a flexible time string in various formats and returns a datetime object.
+
+    Supports formats like:
+    - %y-%m-%d-%H:%M
+    - %Y-%m-%d-%H:%M
+    - %m-%d-%H:%M
+    - %d-%H:%M
+    - %H:%M
+    """
     now = datetime.now()
 
     formats = [
@@ -150,7 +160,25 @@ def parse_flexible_time(time_str: str) -> datetime:
         except ValueError:
             continue
 
-    raise ValueError(f"Time format not recognized: '{time_str}'")
+    raise ValueError(f"Time format not recognized: '{time_str}'\nSupported formats: %y-%m-%d-%H:%M, %Y-%m-%d-%H:%M, %m-%d-%H:%M, %d-%H:%M, %H:%M")
+
+def parse_UTC(utc_str: str) -> int:
+    """
+    Parses a UTC offset string in the format +/-X or +/-X:XX, and returns the offset in minutes.
+    """
+    if not re.match(r'^[+-]\d{1,2}(:\d{2})?$', utc_str):
+        raise ValueError("UTC must be in the format of +/-X or +/-X:XX")
+    
+    print(f"Parsing UTC offset: {utc_str}")
+    parts = utc_str.split(':')
+
+    sign = 1 if parts[0][0] == '+' else -1
+    hours = int(parts[0][1:]) if len(parts[0]) > 1 else 0
+    minutes = int(parts[1]) if len(parts) > 1 else 0
+
+    offset = sign * (hours * 60 + minutes)
+
+    return offset
 
 async def time2unix(datetime_str: str) -> int:
     """
@@ -193,14 +221,14 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     Load reminders from file
     """
     if not os.path.exists(f"data/{guild_id}/reminders.json"):
-        print(f"\t[REMI] No reminder folder found for {guild_id}. Creating file...")
+        print(f"\t[LOAD] No reminder folder found for {guild_id}. Creating file...")
         return []
 
     with open(f"data/{guild_id}/reminders.json", "r") as f:
         reminders = json.load(f)
 
     if not len(reminders) == 0:
-        print(f"\t[REMI] Loaded {len(reminders)} reminders for {guild_id}!")
+        print(f"\t[LOAD] Loaded {len(reminders)} reminders for {guild_id}!")
     
     return reminders
 
@@ -248,8 +276,8 @@ async def create_reminder(
     reminders = await load_reminders(ctx.guild.id)
 
     print(f"[REMI] {ctx.author.name} creating reminder in {ctx.guild.name}")
-    print(f"\t[REMI] Parsing info...")
-    print(f"\t\t[REMI] Parsing mentions...")
+    print(f"\t[MAKE] Parsing info...")
+    print(f"\t\t[MAKE] Parsing mentions...")
     if time is None:
         time = datetime.now().strftime("%y-%m-%d-%H:%M")
 
@@ -258,8 +286,8 @@ async def create_reminder(
     if mention_str is []:
         mention_str = [ctx.author.mention]
     
-    print(f"\t\t[REMI] Done!")
-    print(f"\t\t[REMI] Parsing Subtitles and Messages...")
+    print(f"\t\t[MAKE] Done!")
+    print(f"\t\t[MAKE] Parsing Subtitles and Messages...")
 
     # This does nothing when the string is empty, will fix later
     # New function should only need to check if there are more messages than subtitles
@@ -283,12 +311,12 @@ async def create_reminder(
         await ctx.send(str(e), ephemeral=True)
         return
 
-    print(f"\t\t[REMI] Done!")
-    print(f"\t\t[REMI] Parsing repeat time...")
+    print(f"\t\t[MAKE] Done!")
+    print(f"\t\t[MAKE] Parsing repeat time...")
     repeat_seconds = await time2seconds(ctx, repeat) if repeat else None
-    print(f"\t[REMI] Finished Parsing info!")
+    print(f"\t[MAKE] Finished Parsing info!")
 
-    print(f"\t[REMI] Creating reminder...")
+    print(f"\t[MAKE] Creating reminder...")
     reminders.append({
         "issuer_id": ctx.author.id,
         "guild_id": ctx.guild.id,
@@ -303,16 +331,16 @@ async def create_reminder(
         "repeat": int(repeat_seconds/60) if repeat else None,
     })
 
-    print(f"\t[REMI] Done!")
-    print(f"\t[REMI] Saving reminder to file...")
+    print(f"\t[MAKE] Done!")
+    print(f"\t[SAVE] Saving reminder to file...")
     # Save reminders to file
     if not os.path.exists(f"data/{ctx.guild.id}"):
         os.makedirs(f"data/{ctx.guild.id}")
-        print(f"[REMI] Created folder for guild: {ctx.guild.name} - {ctx.guild.id}")
+        print(f"[SAVE] Created folder for guild: {ctx.guild.name} - {ctx.guild.id}")
 
     with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
         json.dump(reminders, f, indent=4)
-    print(f"\t[REMI] Reminder Saved!")
+    print(f"\t[SAVE] Reminder Saved!")
     print(f"\t[REMI] Reminder ID: {reminders[-1]['reminder_id']} Created!")
     await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)
 
@@ -324,6 +352,7 @@ async def list_reminders(ctx : commands.Context):
     """
     List all reminders for the server
     """
+    print(f"[LIST] {ctx.author.name} checking reminders in {ctx.guild.name}")
     reminders = await load_reminders(ctx.guild.id)
 
     em = dc.Embed(
@@ -339,6 +368,7 @@ async def list_reminders(ctx : commands.Context):
             inline=False,
         )
     else:
+        print(f"[LIST] Parsing {len(reminders)} reminders in {ctx.guild.name}")
         for reminder in reminders:
             value_str = f"> `Next Reminder`: {reminder['time']}\
                         \n> `Local Time`: <t:{str(await time2unix(reminder['time']))}:F>\
@@ -358,6 +388,7 @@ async def list_reminders(ctx : commands.Context):
             )
     
     await ctx.send(embed=em, ephemeral=True)
+    print(f"[LIST] Sent reminders list of {len(reminders)} reminders in {ctx.guild.name} -> {ctx.channel.name}")
 
 @bot.hybrid_command(
     name="delete_reminder",
@@ -371,7 +402,7 @@ async def delete_reminder(
     """
     Delete a reminder by ID
     """
-    print(f"[REMI] {ctx.author.name} deleting reminder {reminder_id} in {ctx.guild.name}")
+    print(f"[DLET] {ctx.author.name} deleting reminder {reminder_id} in {ctx.guild.name}")
     reminders = await load_reminders(ctx.guild.id)
 
     for reminder in reminders:
@@ -384,7 +415,7 @@ async def delete_reminder(
             with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
                 json.dump(reminders, f, indent=4)
             await ctx.send("Reminder deleted!", ephemeral=True)
-            print(f"[REMI] Deleted reminder {reminder_id} in {ctx.guild.name}")
+            print(f"[DLET] Deleted reminder {reminder_id} in {ctx.guild.name}")
             return
 
     await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
@@ -460,9 +491,39 @@ async def bot_time(
 
     await ctx.send(f"## {datetime_obj.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True) 
 
+# @bot.hybrid_command(
+#     name="local2bot",
+#     description="Convert a local time with UTC offset (e.g. -7, +2) to the bot's UTC time"
+# )
+async def local_to_bot(
+    ctx: commands.Context,
+    time: str,
+    timezone: typing.Optional[str],  # e.g. MDT, EST, etc.
+    UTC: typing.Optional[str]        # Only +X or -X
+):
+    await ctx.defer(ephemeral=True)
+
+    try:
+        parse_UTC(UTC)
+
+        dt_min = parse_UTC(UTC)
+        utc_datetime = parse_flexible_time(time)
+
+        utc_dt = utc_datetime - timedelta(minutes=dt_min) # Adjust to UTC
+
+        unix_time = int(utc_dt.timestamp())
+
+        await ctx.send(
+            f"## {utc_datetime.strftime("%y-%m-%d-%H:%M")} in UTC{UTC} is:\n## <t:{unix_time}:F> UTC\n## Format for Bot: {utc_dt.strftime("%y-%m-%d-%H:%M")}",
+            ephemeral=True
+        )
+
+    except Exception as e:
+        await ctx.send(f"Error: {str(e)}", ephemeral=True)
+
 # TASKS
 @tasks.loop(seconds=60)
-async def check_reminders():
+async def reminder_task():
     """
     Check reminders every minute
     """
@@ -516,23 +577,23 @@ async def check_reminders():
     print("[REMI] Finished checking reminders!")
 
 @tasks.loop(minutes=15)
-async def send_heartbeat():
+async def heartbeat_task():
     """
     Send a heartbeat to the healthcheck.io every 15 minutes
     """
-    print("[REMI] Sending heartbeat to healthchecks.io...")
+    print("[BEAT] Sending heartbeat to healthchecks.io...")
     heartbeat_uuid = os.getenv("HEARTBEAT_UUID")
 
     try:
         response = requests.get(f"https://hc-ping.com/{heartbeat_uuid}")
         if response.status_code == 200:
-            print("[REMI] Heartbeat sent successfully!")
+            print("[BEAT] Heartbeat sent successfully!")
         else:
-            print(f"[REMI] Failed to send heartbeat: {response.status_code} - {response.text}")
+            print(f"[BEAT] Failed to send heartbeat: {response.status_code} - {response.text}")
 
     except Exception as e:
         # Optional: local logging of the failure
-        print(f"[REMI] Failed to send ping: {e}")
+        print(f"[BEAT] Failed to send ping: {e}")
 
 # OWNER COMMANDS
 @bot.command(

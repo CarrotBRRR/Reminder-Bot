@@ -502,27 +502,27 @@ async def local_to_bot(
     ctx: commands.Context,
     time: typing.Optional[str] = None,  # Time in HH:MM or MM-DD-HH:MM or DD-HH:MM or YY-MM-DD-HH:MM
     timezone: typing.Optional[str] = None,  # e.g. MDT, EST, etc.
-    UTC: typing.Optional[str] = None        # Only +X or -X
+    utc: typing.Optional[str] = None        # Only +X or -X
 ):
     await ctx.defer(ephemeral=True)
 
     if time is None:
         time = datetime.now().strftime("%y-%m-%d-%H:%M")
 
-    if UTC is not None and timezone is not None:
+    if utc is not None and timezone is not None:
         await ctx.send("Please provide only a UTC offset or a timezone", ephemeral=True)
         return
 
-    if UTC is None:
-        UTC = "+0:00"
+    if utc is None:
+        utc = "+0:00"
 
     if timezone is not None:
-        # Convert timezone to UTC offset
+        # Convert timezone to utc offset
         try:
             with open("timezones_info.json", "r") as f:
                 timezones_info = json.load(f)
             if timezone in timezones_info:
-                UTC = timezones_info[timezone]
+                utc = timezones_info[timezone]
             else:
                 raise ValueError(f"Unknown timezone: {timezone}.\nPlease provide a valid UTC offset (e.g. ±X:XX) or timezone (e.g. GMT, MDT, EST, etc.)")
 
@@ -535,17 +535,17 @@ async def local_to_bot(
             return
 
     try:
-        parse_UTC(UTC)
+        parse_UTC(utc)
 
-        dt_min = parse_UTC(UTC)
+        dt_min = parse_UTC(utc)
         utc_datetime = parse_flexible_time(time)
 
-        utc_dt = utc_datetime - timedelta(minutes=dt_min) # Adjust to UTC
+        utc_dt = utc_datetime - timedelta(minutes=dt_min) # Adjust to utc
 
         unix_time = int(utc_dt.timestamp())
 
         await ctx.send(
-            f"## {utc_datetime.strftime("%y-%m-%d-%H:%M")} in UTC{UTC} is:\n## <t:{unix_time}:F> UTC\n## Format for Bot: {utc_dt.strftime("%y-%m-%d-%H:%M")}",
+            f"## {utc_datetime.strftime("%y-%m-%d-%H:%M")} in UTC{utc} is:\n## <t:{unix_time}:F> UTC\n## Format for Bot: {utc_dt.strftime("%y-%m-%d-%H:%M")}",
             ephemeral=True
         )
 

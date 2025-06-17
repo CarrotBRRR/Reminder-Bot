@@ -1,4 +1,4 @@
-import os, json, re, uuid, base64, requests
+import os, json, re, uuid, requests
 import discord as dc
 import typing
 

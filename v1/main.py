@@ -180,6 +180,19 @@ def parse_UTC(utc_str: str) -> int:
 
     return offset
 
+def get_timezone_offset_str(timezone: str) -> str:
+    """
+    Returns the UTC offset for a given timezone.
+    """
+    timezone = timezone.upper()
+    with open("data/timezones_info.json", "r") as f:
+        timezones_info = json.load(f)
+    if timezone in timezones_info:
+        utc = timezones_info[timezone]
+    else:
+        raise ValueError(f"Unknown timezone: {timezone}.\nPlease provide a valid UTC offset (e.g. ±X:XX) or timezone (e.g. GMT, MDT, EST, etc.)")
+    return utc
+
 async def time2unix(datetime_str: str) -> int:
     """
     Converts a datetime object to a Unix timestamp
@@ -520,12 +533,7 @@ async def local_to_bot(
         # Convert timezone to utc offset
         timezone = timezone.upper()
         try:
-            with open("data/timezones_info.json", "r") as f:
-                timezones_info = json.load(f)
-            if timezone in timezones_info:
-                utc = timezones_info[timezone]
-            else:
-                raise ValueError(f"Unknown timezone: {timezone}.\nPlease provide a valid UTC offset (e.g. ±X:XX) or timezone (e.g. GMT, MDT, EST, etc.)")
+            utc = get_timezone_offset_str(timezone)
 
         except FileNotFoundError:
             await ctx.send(f"Timezones info file not found. Please Contact Bot Owner", ephemeral=True)
@@ -553,6 +561,81 @@ async def local_to_bot(
     except Exception as e:
         await ctx.send(f"Error: {str(e)}", ephemeral=True)
 
+@bot.hybrid_command(
+    name="timeconvert",
+    description="Convert a time to another timezone",
+    time="Time you want to convert",
+    timezone="Origin timezone (e.g. MDT, EST, etc.)",
+    to="Timezone to convert to (e.g. GMT, MDT, EST, etc.)",
+)
+async def time_convert(
+    ctx: commands.Context,
+    time: typing.Optional[str] = None,  # Time in HH:MM or MM
+    timezone: typing.Optional[str] = None,  # e.g. MDT, EST, etc.
+    to: typing.Optional[str] = None        # e.g. GMT, MDT, EST
+):
+    await ctx.defer(ephemeral=True)
+
+    # If no time is provided, use the current time
+    if time is None:
+        time = datetime.now().strftime("%y-%m-%d-%H:%M")
+
+    if timezone is not None:
+        try:
+            origin_utc = get_timezone_offset_str(timezone)
+
+        except FileNotFoundError:
+            await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
+            return
+        
+        except ValueError as e:
+            await ctx.send(str(e), ephemeral=True)
+            return
+    else:
+        # Default to UTC if no timezone is provided
+        timezone = "UTC"
+        origin_utc = "+0:00"
+
+    if to is not None:
+        try:
+            target_utc = get_timezone_offset_str(to)
+
+        except FileNotFoundError:
+            await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
+            return
+        
+        except ValueError as e:
+            await ctx.send(str(e), ephemeral=True)
+            return
+    else:
+        # Default to UTC if no target timezone is provided
+        to = "UTC"
+        target_utc = "+0:00"
+
+    try:
+        origin_offset = parse_UTC(origin_utc)
+        target_offset = parse_UTC(target_utc)
+
+        # Parse the time string
+        datetime_obj = parse_flexible_time(time)
+
+        # Convert to UTC
+        utc_datetime = datetime_obj - timedelta(minutes=origin_offset)
+
+        # Convert to target timezone
+        target_datetime = utc_datetime + timedelta(minutes=target_offset)
+
+        unix_time = int(datetime.now().timestamp())
+
+        await ctx.send(
+            f"## {utc_datetime.strftime('%y-%m-%d-%H:%M')} {timezone} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%y-%m-%d-%H:%M')} {to} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
+            ephemeral=True
+        )
+
+    except Exception as e:
+        await ctx.send(f"Error: {str(e)}", ephemeral=True)
+        return
+        
 # TASKS
 @tasks.loop(seconds=60)
 async def reminder_task():

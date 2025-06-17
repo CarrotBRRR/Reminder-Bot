@@ -519,7 +519,7 @@ async def local_to_bot(
     if timezone is not None:
         # Convert timezone to utc offset
         try:
-            with open("timezones_info.json", "r") as f:
+            with open("data/timezones_info.json", "r") as f:
                 timezones_info = json.load(f)
             if timezone in timezones_info:
                 utc = timezones_info[timezone]

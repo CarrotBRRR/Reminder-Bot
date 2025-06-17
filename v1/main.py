@@ -546,7 +546,7 @@ async def local_to_bot(
         unix_time = int(utc_dt.timestamp())
 
         await ctx.send(
-            f"## {utc_datetime.strftime("%y-%m-%d-%H:%M")} in UTC{utc} is:\n## <t:{unix_time}:F> UTC\n## Format for Bot: {utc_dt.strftime("%y-%m-%d-%H:%M")}",
+            f"## <t:{unix_time}:F> UTC{utc} is:\n## {utc_dt.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time)",
             ephemeral=True
         )
 

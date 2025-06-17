@@ -136,7 +136,7 @@ def parse_flexible_time(time_str: str) -> datetime:
     """
     Parses a flexible time string in various formats and returns a datetime object.
 
-    Supports formats like:
+    Supports formats:
     - %y-%m-%d-%H:%M
     - %Y-%m-%d-%H:%M
     - %m-%d-%H:%M
@@ -160,7 +160,7 @@ def parse_flexible_time(time_str: str) -> datetime:
         except ValueError:
             continue
 
-    raise ValueError(f"Time format not recognized: '{time_str}'\nSupported formats: %y-%m-%d-%H:%M, %Y-%m-%d-%H:%M, %m-%d-%H:%M, %d-%H:%M, %H:%M")
+    raise ValueError(f"## Time format not recognized: '{time_str}'\n### Supported formats:\n- %y-%m-%d-%H:%M\n- %Y-%m-%d-%H:%M\n- %m-%d-%H:%M\n- %d-%H:%M\n- %H:%M")
 
 def parse_UTC(utc_str: str) -> int:
     """
@@ -491,17 +491,48 @@ async def bot_time(
 
     await ctx.send(f"## {datetime_obj.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True) 
 
-# @bot.hybrid_command(
-#     name="local2bot",
-#     description="Convert a local time with UTC offset (e.g. -7, +2) to the bot's UTC time"
-# )
+@bot.hybrid_command(
+    name="localtime",
+    description="Convert a local time with UTC offset (e.g. -7, +2) to the bot's UTC time",
+    time="Your local time you want to convert to bot time",
+    UTC="Your UTC offset (e.g. +2, -5, etc.)",
+    timezone="Your timezone (e.g. MDT, EST, etc.)",
+)
 async def local_to_bot(
     ctx: commands.Context,
-    time: str,
-    timezone: typing.Optional[str],  # e.g. MDT, EST, etc.
-    UTC: typing.Optional[str]        # Only +X or -X
+    time: typing.Optional[str] = None,  # Time in HH:MM or MM-DD-HH:MM or DD-HH:MM or YY-MM-DD-HH:MM
+    timezone: typing.Optional[str] = None,  # e.g. MDT, EST, etc.
+    UTC: typing.Optional[str] = None        # Only +X or -X
 ):
     await ctx.defer(ephemeral=True)
+
+    if time is None:
+        time = datetime.now().strftime("%y-%m-%d-%H:%M")
+
+    if UTC is not None and timezone is not None:
+        await ctx.send("Please provide only a UTC offset or a timezone", ephemeral=True)
+        return
+
+    if UTC is None:
+        UTC = "+0:00"
+
+    if timezone is not None:
+        # Convert timezone to UTC offset
+        try:
+            with open("timezones_info.json", "r") as f:
+                timezones_info = json.load(f)
+            if timezone in timezones_info:
+                UTC = timezones_info[timezone]
+            else:
+                raise ValueError(f"Unknown timezone: {timezone}.\nPlease provide a valid UTC offset (e.g. ±X:XX) or timezone (e.g. GMT, MDT, EST, etc.)")
+
+        except FileNotFoundError:
+            await ctx.send(f"Timezones info file not found. Please Contact Bot Owner", ephemeral=True)
+            return
+        
+        except ValueError as e:
+            await ctx.send(str(e), ephemeral=True)
+            return
 
     try:
         parse_UTC(UTC)

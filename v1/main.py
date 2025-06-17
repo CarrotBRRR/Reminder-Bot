@@ -495,7 +495,7 @@ async def bot_time(
     name="localtime",
     description="Convert a local time with UTC offset (e.g. -7, +2) to the bot's UTC time",
     time="Your local time you want to convert to bot time",
-    UTC="Your UTC offset (e.g. +2, -5, etc.)",
+    utc="Your UTC offset (e.g. +2, -5, etc.)",
     timezone="Your timezone (e.g. MDT, EST, etc.)",
 )
 async def local_to_bot(

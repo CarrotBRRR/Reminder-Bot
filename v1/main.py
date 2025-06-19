@@ -581,7 +581,7 @@ async def time_convert(
 
     if timezone is not None:
         try:
-            origin_utc = get_timezone_offset_str(timezone).upper()
+            origin_utc = get_timezone_offset_str(timezone)
 
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
@@ -597,7 +597,7 @@ async def time_convert(
 
     if to is not None:
         try:
-            target_utc = get_timezone_offset_str(to).upper()
+            target_utc = get_timezone_offset_str(to)
 
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
@@ -626,7 +626,7 @@ async def time_convert(
         target_datetime = utc_datetime + timedelta(minutes=target_offset)
 
         await ctx.send(
-            f"## {datetime_obj.strftime('%Y-%m-%d-%H:%M')} {timezone} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
+            f"## {datetime_obj.strftime('%Y-%m-%d-%H:%M')} {timezone.upper()} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to} (UTC{target_utc.upper()})\n### <t:{unix_time}:F> in your local time",
             ephemeral=True
         )
 

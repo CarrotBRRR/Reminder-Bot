@@ -516,49 +516,16 @@ async def local_to_bot(
     timezone: typing.Optional[str] = None,  # e.g. MDT, EST, etc.
     utc: typing.Optional[str] = None        # Only +X or -X
 ):
-    await ctx.defer(ephemeral=True)
-
-    if time is None:
-        time = datetime.now().strftime("%Y-%m-%d-%H:%M")
-
-    if utc is not None and timezone is not None:
-        await ctx.send("Please provide only a UTC offset or a timezone", ephemeral=True)
+    if utc and timezone:
+        await ctx.send("Please provide either a UTC offset or a timezone, not both.", ephemeral=True)
         return
-
-    if utc is None:
-        utc = "+0:00"
-
-    if timezone is not None:
-        # Convert timezone to utc offset
-        timezone = timezone.upper()
-        try:
-            utc = get_timezone_offset_str(timezone)
-
-        except FileNotFoundError:
-            await ctx.send(f"Timezones info file not found. Please Contact Bot Owner", ephemeral=True)
-            return
-        
-        except ValueError as e:
-            await ctx.send(str(e), ephemeral=True)
-            return
-
-    try:
-        parse_UTC(utc)
-
-        dt_min = parse_UTC(utc)
-        utc_datetime = parse_flexible_time(time)
-
-        utc_dt = utc_datetime - timedelta(minutes=dt_min) # Adjust to utc
-
-        unix_time = int(utc_dt.timestamp())
-
-        await ctx.send(
-            f"## <t:{unix_time}:F> UTC{utc} is:\n## {utc_dt.strftime("%Y-%m-%d-%H:%M")} UTC (Bot Time)",
-            ephemeral=True
-        )
-
-    except Exception as e:
-        await ctx.send(f"Error: {str(e)}", ephemeral=True)
+    
+    await time_convert(
+        ctx,
+        time=time,
+        timezone=timezone if timezone is not None else "UTC",
+        to="UTC" if utc is None else utc
+    )
 
 @bot.hybrid_command(
     name="timeconvert",

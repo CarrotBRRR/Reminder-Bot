@@ -600,7 +600,47 @@ async def time_convert(
     except Exception as e:
         await ctx.send(f"Error: {str(e)}", ephemeral=True)
         return
-        
+
+@bot.hybrid_command(
+    name="timezones",
+    description="List all accepted timezones",
+)
+async def list_timezones(ctx: commands.Context):
+    """
+    List all accepted timezones
+    """
+    ems = []
+
+    try:
+        with open("data/timezones_info.json", "r") as f:
+            timezones_info: dict[str, str] = json.load(f)
+
+    except FileNotFoundError:
+        await ctx.send("timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
+        return
+    
+    # split into 25 timezones per embed
+    em = dc.Embed(
+        title="Available Timezones",
+        description="List of available timezones with their UTC offsets",
+        color=0x00ff00,
+        inline=True
+    )
+    for i, (timezone, utc) in enumerate(timezones_info.items()):
+        em.add_field(
+            name=f"{timezone:>5} UTC{utc}",
+            inline=True
+        )
+
+        if (i + 1) % 25 == 0:
+            ems.append(em)
+            em = dc.Embed(
+                color=0x00ff00,
+                inline=True
+            )
+
+    await ctx.send(embeds=ems, ephemeral=True)
+
 # TASKS
 @tasks.loop(seconds=60)
 async def reminder_task():

@@ -347,7 +347,7 @@ async def bot_time(
 
 @bot.hybrid_command(
     name="localtime",
-    description="Convert a local time with UTC offset (e.g. -7, +2) to the bot's UTC time",
+    description="Convert a local time with UTC offset (e.g. -7, +2) to the bot's UTC time or your timezone code",
     time="Your local time you want to convert to bot time",
     utc="Your UTC offset (e.g. +2, -5, etc.)",
     timezone="Your timezone (e.g. MDT, EST, etc.)",
@@ -362,12 +362,45 @@ async def local_to_bot(
         await ctx.send("Please provide either a UTC offset or a timezone, not both.", ephemeral=True)
         return
     
-    await time_convert(
-        ctx,
-        time=time,
-        timezone=timezone if timezone is not None else "UTC",
-        to="UTC" if utc is None else utc
-    )
+    elif timezone:
+        # If timezone is provided, convert to UTC offset
+        try:
+            utc = get_timezone_offset_str(timezone)
+        except FileNotFoundError:
+            await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
+            return
+        except ValueError as e:
+            await ctx.send(str(e), ephemeral=True)
+            return
+
+        await time_convert(
+            ctx,
+            time=time if time is not None else datetime.now() - timedelta(minutes=parse_UTC(utc)),
+            timezone=timezone if timezone is not None else "UTC",
+            to="UTC" if utc is None else utc
+        )
+    
+    elif utc:
+        # If UTC offset is provided, convert to UTC
+        try:
+            utc_offset = parse_UTC(utc)
+
+            # If time is not provided, use the current time adjusted by the UTC offset
+            if time is None:
+                time = datetime.now().strftime("%Y-%m-%d-%H:%M")
+
+            else:
+                bot_time_offset = (parse_flexible_time(time) - timedelta(minutes=utc_offset)).strftime("%Y-%m-%d-%H:%M")
+                
+            await ctx.send(
+                f"{time} (UTC{utc}) is:\n## {bot_time_offset} (UTC)",
+                ephemeral=True
+            )
+
+        except ValueError as e:
+            await ctx.send(str(e), ephemeral=True)
+            return
+            
 
 @bot.hybrid_command(
     name="timeconvert",

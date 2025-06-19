@@ -388,10 +388,8 @@ async def local_to_bot(
             # If time is not provided, use the current time adjusted by the UTC offset
             if time is None:
                 time = datetime.now().strftime("%Y-%m-%d-%H:%M")
-
-            else:
-                bot_time_offset = (parse_flexible_time(time) + timedelta(minutes=utc_offset)).strftime("%Y-%m-%d-%H:%M")
-                
+ 
+            bot_time_offset = (parse_flexible_time(time) + timedelta(minutes=utc_offset)).strftime("%Y-%m-%d-%H:%M")   
             await ctx.send(
                 f"{time} (UTC{utc}) is:\n## {bot_time_offset} (UTC)",
                 ephemeral=True

@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 
+from Paginator import Paginator
+
 ### GLOBALS
 load_dotenv()
 
@@ -628,17 +630,26 @@ async def list_timezones(ctx: commands.Context):
     for i, (timezone, utc) in enumerate(timezones_info.items()):
         em.add_field(
             name=f"{timezone:>5}",
-            value=f"{utc}",
+            value=f"UTC{utc}",
             inline=True
         )
 
         if (i + 1) % 24 == 0:
+            em.set_footer(text=f"Page {len(ems) + 1} of {len(timezones_info) // 24 + 1}")
             ems.append(em)
+
             em = dc.Embed(
+                title="Available Timezones",
+                description="List of available timezones with their UTC offsets",
                 color=0x00ff00
             )
 
-    await ctx.send(embeds=ems, ephemeral=True)
+    em.set_footer(text=f"Page {len(ems) + 1} of {len(ems) + 1}")
+    ems.append(em)  # Add the last embed
+
+    pages = Paginator(ems)
+    msg = await ctx.send(embed=ems[0], view=pages, ephemeral=True)
+    pages.message = msg
 
 # TASKS
 @tasks.loop(seconds=60)
@@ -730,4 +741,5 @@ async def sync(ctx : commands.Context):
     await msg.edit(content="Synced the tree!", delete_after=2)
     print(f"[REMI] Synced the tree!")
 
-bot.run(os.getenv("TOKEN"))
+bot.run(os.getenv("TEST_TOKEN"))
+# bot.run(os.getenv("TOKEN"))

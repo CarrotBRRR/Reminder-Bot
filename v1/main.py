@@ -169,7 +169,6 @@ def parse_UTC(utc_str: str) -> int:
     if not re.match(r'^[+-]\d{1,2}(:\d{2})?$', utc_str):
         raise ValueError("UTC must be in the format of +/-X or +/-X:XX")
     
-    print(f"Parsing UTC offset: {utc_str}")
     parts = utc_str.split(':')
 
     sign = 1 if parts[0][0] == '+' else -1
@@ -292,7 +291,7 @@ async def create_reminder(
     print(f"\t[MAKE] Parsing info...")
     print(f"\t\t[MAKE] Parsing mentions...")
     if time is None:
-        time = datetime.now().strftime("%y-%m-%d-%H:%M")
+        time = datetime.now().strftime("%Y-%m-%d-%H:%M")
 
     mention_str = await get_mentions(mentions, ctx.guild)
 
@@ -336,7 +335,7 @@ async def create_reminder(
         "channel_id": ctx.channel.id,
         "reminder_id": uuid_base62(),
 
-        "time": t.strftime("%y-%m-%d-%H:%M"),
+        "time": t.strftime("%Y-%m-%d-%H:%M"),
         "title": title,
         "subtitles": subtitles,
         "message": message,
@@ -492,7 +491,7 @@ async def bot_time(
 
     try:
         if time is None:
-            time = datetime.now().strftime("%y-%m-%d-%H:%M")
+            time = datetime.now().strftime("%Y-%m-%d-%H:%M")
 
         datetime_obj = parse_flexible_time(time)
 
@@ -502,7 +501,7 @@ async def bot_time(
     
     time_int = int(datetime_obj.timestamp())
 
-    await ctx.send(f"## {datetime_obj.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True) 
+    await ctx.send(f"## {datetime_obj.strftime("%Y-%m-%d-%H:%M")} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True) 
 
 @bot.hybrid_command(
     name="localtime",
@@ -520,7 +519,7 @@ async def local_to_bot(
     await ctx.defer(ephemeral=True)
 
     if time is None:
-        time = datetime.now().strftime("%y-%m-%d-%H:%M")
+        time = datetime.now().strftime("%Y-%m-%d-%H:%M")
 
     if utc is not None and timezone is not None:
         await ctx.send("Please provide only a UTC offset or a timezone", ephemeral=True)
@@ -554,7 +553,7 @@ async def local_to_bot(
         unix_time = int(utc_dt.timestamp())
 
         await ctx.send(
-            f"## <t:{unix_time}:F> UTC{utc} is:\n## {utc_dt.strftime("%y-%m-%d-%H:%M")} UTC (Bot Time)",
+            f"## <t:{unix_time}:F> UTC{utc} is:\n## {utc_dt.strftime("%Y-%m-%d-%H:%M")} UTC (Bot Time)",
             ephemeral=True
         )
 
@@ -578,11 +577,11 @@ async def time_convert(
 
     # If no time is provided, use the current time
     if time is None:
-        time = datetime.now().strftime("%y-%m-%d-%H:%M")
+        time = datetime.now().strftime("%Y-%m-%d-%H:%M")
 
     if timezone is not None:
         try:
-            origin_utc = get_timezone_offset_str(timezone)
+            origin_utc = get_timezone_offset_str(timezone).upper()
 
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
@@ -598,7 +597,7 @@ async def time_convert(
 
     if to is not None:
         try:
-            target_utc = get_timezone_offset_str(to)
+            target_utc = get_timezone_offset_str(to).upper()
 
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
@@ -617,18 +616,17 @@ async def time_convert(
         target_offset = parse_UTC(target_utc)
 
         # Parse the time string
-        datetime_obj = parse_flexible_time(time)
+        datetime_obj = parse_flexible_time(time)    # Base time in the origin timezone
 
         # Convert to UTC
-        utc_datetime = datetime_obj - timedelta(minutes=origin_offset)
+        utc_datetime = datetime_obj - timedelta(minutes=origin_offset) # Adjust to UTC
+        unix_time = int(utc_datetime.timestamp())
 
         # Convert to target timezone
         target_datetime = utc_datetime + timedelta(minutes=target_offset)
 
-        unix_time = int(datetime.now().timestamp())
-
         await ctx.send(
-            f"## {utc_datetime.strftime('%y-%m-%d-%H:%M')} {timezone} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%y-%m-%d-%H:%M')} {to} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
+            f"## {datetime_obj.strftime('%Y-%m-%d-%H:%M')} {timezone} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
             ephemeral=True
         )
 
@@ -643,8 +641,8 @@ async def reminder_task():
     Check reminders every minute
     """
     print("[REMI] Checking reminders...")
-    now_str = datetime.now().strftime("%y-%m-%d-%H:%M")
-    now_dt = datetime.strptime(now_str, "%y-%m-%d-%H:%M")
+    now_str = datetime.now().strftime("%Y-%m-%d-%H:%M")
+    now_dt = datetime.strptime(now_str, "%Y-%m-%d-%H:%M")
     print(f"\t[REMI] Current time: {now_str}")
 
     for guild in bot.guilds:
@@ -652,7 +650,7 @@ async def reminder_task():
         updated = False
 
         for reminder in reminders[:]:  # Use a slice to avoid modifying the list during iteration
-            reminder_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M")
+            reminder_time = datetime.strptime(reminder["time"], "%Y-%m-%d-%H:%M")
             late = reminder_time < now_dt
             do_reminder = late or reminder_time == now_dt
 
@@ -664,7 +662,7 @@ async def reminder_task():
                     delta_min = (now_dt - reminder_time).total_seconds() // 60
                     repeats_passed = int(delta_min // reminder["repeat"]) + 1
                     new_time = reminder_time + timedelta(minutes=repeats_passed * reminder["repeat"])
-                    reminder["time"] = new_time.strftime("%y-%m-%d-%H:%M")
+                    reminder["time"] = new_time.strftime("%Y-%m-%d-%H:%M")
 
                     print(f"\t[REMI] Reminder time updated to: {reminder['time']}")
                     updated = True
@@ -678,8 +676,8 @@ async def reminder_task():
 
                 elif not late:
                     # Regular (non-late) repeating reminder; update time
-                    next_time = datetime.strptime(reminder["time"], "%y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])
-                    reminder["time"] = next_time.strftime("%y-%m-%d-%H:%M")
+                    next_time = datetime.strptime(reminder["time"], "%Y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])
+                    reminder["time"] = next_time.strftime("%Y-%m-%d-%H:%M")
                     updated = True
 
                 elif reminder["repeat"] is None:

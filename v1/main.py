@@ -627,12 +627,12 @@ async def list_timezones(ctx: commands.Context):
     )
     for i, (timezone, utc) in enumerate(timezones_info.items()):
         em.add_field(
-            name=f"{timezone:>5} UTC{utc}",
-            value="",
+            name=f"{timezone:>5}",
+            value=f"{utc}",
             inline=True
         )
 
-        if (i + 1) % 25 == 0:
+        if (i + 1) % 24 == 0:
             ems.append(em)
             em = dc.Embed(
                 color=0x00ff00

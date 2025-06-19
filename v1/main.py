@@ -1,4 +1,4 @@
-import os, json, re, uuid, requests
+import os, json, uuid, requests
 import discord as dc
 import typing
 
@@ -7,6 +7,8 @@ from discord.ext import tasks, commands
 from dotenv import load_dotenv
 
 from ReminderLib.Paginator import Paginator
+from ReminderLib.Parser import *
+from ReminderLib.DBController import *
 
 ### GLOBALS
 load_dotenv()
@@ -82,126 +84,6 @@ async def on_guild_join(guild : dc.Guild):
         print(f"[REMI] Created reminders file for guild: {guild.name} - {guild.id}")
 
 # HELPER FUNCTIONS
-async def time2seconds(ctx, duration_str : str) -> int:
-    """
-    Converts a time string to seconds
-    """
-    time_factors = {
-        'y': 31556952, # 1 year = 31536000 seconds
-        'mo': 2629746, # 1 month = 2592000 seconds
-        'w': 604800, # 1 week = 604800 seconds
-        'd': 86400,  # 1 day = 86400 seconds
-        'h': 3600,   # 1 hour = 3600 seconds
-        'm': 60,     # 1 minute = 60 seconds
-        's': 1       # 1 second = 1 second
-    }
-
-    # Find all occurrences of number followed by a letter
-    matches = re.findall(r'(\d+)\s*([dhms])', duration_str.lower())
-    if not matches:
-        await ctx.send("Invalid time format. Please use a format '1d 2h 12m' separated by spaces.", ephemeral=True)
-        return 0
-    
-    total_seconds = 0
-    for value, unit in matches:
-        total_seconds += int(value) * time_factors[unit]
-
-    return total_seconds
-
-async def seconds2time(seconds: int) -> str:
-    """
-    Converts seconds to a human-readable time format
-    """
-    if seconds < 0:
-        return "Invalid time"
-
-    time_parts = []
-    time_units = {
-        'y': 31556952,  # 1 year
-        'mo': 2629746,  # 1 month
-        'w': 604800,    # 1 week
-        'd': 86400,     # 1 day
-        'h': 3600,      # 1 hour
-        'm': 60,        # 1 minute
-        's': 1          # 1 second
-    }
-
-    for unit, factor in time_units.items():
-        if seconds >= factor:
-            value = seconds // factor
-            seconds %= factor
-            time_parts.append(f"{value}{unit}")
-
-    return " ".join(time_parts) if time_parts else "0s"
-
-def parse_flexible_time(time_str: str) -> datetime:
-    """
-    Parses a flexible time string in various formats and returns a datetime object.
-
-    Supports formats:
-    - %y-%m-%d-%H:%M
-    - %Y-%m-%d-%H:%M
-    - %m-%d-%H:%M
-    - %d-%H:%M
-    - %H:%M
-    """
-    now = datetime.now()
-
-    formats = [
-        ("%y-%m-%d-%H:%M", time_str),                                               # %y-%m-%d-%H:%M
-        ("%Y-%m-%d-%H:%M", time_str),                                               # %Y-%m-%d-%H:%M
-        ("%Y-%m-%d-%H:%M", f"{now.year}-{time_str}"),                               # %m-%d-%H:%M
-        ("%Y-%m-%d-%H:%M", f"{now.year}-{now.month:02d}-{time_str}"),               # %d-%H:%M
-        ("%Y-%m-%d-%H:%M", f"{now.year}-{now.month:02d}-{now.day:02d}-{time_str}")  # %H:%M
-    ]
-
-    for fmt, time_candidate in formats:
-        try:
-            return datetime.strptime(time_candidate, fmt)
-        
-        except ValueError:
-            continue
-
-    raise ValueError(f"## Time format not recognized: '{time_str}'\n### Supported formats:\n- %y-%m-%d-%H:%M\n- %Y-%m-%d-%H:%M\n- %m-%d-%H:%M\n- %d-%H:%M\n- %H:%M")
-
-def parse_UTC(utc_str: str) -> int:
-    """
-    Parses a UTC offset string in the format +/-X or +/-X:XX, and returns the offset in minutes.
-    """
-    if not re.match(r'^[+-]\d{1,2}(:\d{2})?$', utc_str):
-        raise ValueError("UTC must be in the format of +/-X or +/-X:XX")
-    
-    parts = utc_str.split(':')
-
-    sign = 1 if parts[0][0] == '+' else -1
-    hours = int(parts[0][1:]) if len(parts[0]) > 1 else 0
-    minutes = int(parts[1]) if len(parts) > 1 else 0
-
-    offset = sign * (hours * 60 + minutes)
-
-    return offset
-
-def get_timezone_offset_str(timezone: str) -> str:
-    """
-    Returns the UTC offset for a given timezone.
-    """
-    timezone = timezone.upper()
-    with open("data/timezones_info.json", "r") as f:
-        timezones_info = json.load(f)
-    if timezone in timezones_info:
-        utc = timezones_info[timezone]
-    else:
-        raise ValueError(f"Unknown timezone: {timezone}.\nPlease provide a valid UTC offset (e.g. ±X:XX) or timezone (e.g. GMT, MDT, EST, etc.)")
-    return utc
-
-async def time2unix(datetime_str: str) -> int:
-    """
-    Converts a datetime object to a Unix timestamp
-    """
-    datetime_obj = parse_flexible_time(datetime_str)
-
-    return int(datetime_obj.timestamp())
-
 def uuid_base62():
     alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     u = uuid.uuid4()
@@ -211,40 +93,6 @@ def uuid_base62():
         num, rem = divmod(num, 62)
         base62 = alphabet[rem] + base62
     return base62
-
-async def get_mentions(mentions : str, guild : dc.Guild) -> typing.List[dc.User | dc.Role]:
-    """
-    Get mentions from a string
-    """
-    mention_ids = re.findall(r'<@!?(\d+)>|<@&(\d+)>', mentions)
-    mention_strs = []
-    for user_id, role_id in mention_ids:
-        if user_id:
-            member = await guild.fetch_member(int(user_id))
-            if member:
-                mention_strs.append(member.mention)
-        elif role_id:
-            role = guild.get_role(int(role_id))
-            if role:
-                mention_strs.append(role.mention)
-
-    return mention_strs
-
-async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
-    """
-    Load reminders from file
-    """
-    if not os.path.exists(f"data/{guild_id}/reminders.json"):
-        print(f"\t[LOAD] No reminder folder found for {guild_id}. Creating file...")
-        return []
-
-    with open(f"data/{guild_id}/reminders.json", "r") as f:
-        reminders = json.load(f)
-
-    if not len(reminders) == 0:
-        print(f"\t[LOAD] Loaded {len(reminders)} reminders for {guild_id}!")
-    
-    return reminders
 
 async def send_reminder(reminder, guild):
     """
@@ -303,8 +151,6 @@ async def create_reminder(
     print(f"\t\t[MAKE] Done!")
     print(f"\t\t[MAKE] Parsing Subtitles and Messages...")
 
-    # This does nothing when the string is empty, will fix later
-    # New function should only need to check if there are more messages than subtitles
     subs = []
     for subtitle in subtitles.split("\n"):
         subs.append(subtitle)
@@ -313,8 +159,8 @@ async def create_reminder(
     for message in messages.split("\n"):
         msgs.append(message)
 
-    if len(subs) != len(msgs):
-        await ctx.send("The number of subtitles and messages must be the same!", ephemeral=True)
+    if len(subs) < len(msgs):
+        await ctx.send("The number of messages must be less than or equal to number of subtitles!", ephemeral=True)
         return
     
     # Adding date info to the time string
@@ -346,15 +192,9 @@ async def create_reminder(
     })
 
     print(f"\t[MAKE] Done!")
-    print(f"\t[SAVE] Saving reminder to file...")
-    # Save reminders to file
-    if not os.path.exists(f"data/{ctx.guild.id}"):
-        os.makedirs(f"data/{ctx.guild.id}")
-        print(f"[SAVE] Created folder for guild: {ctx.guild.name} - {ctx.guild.id}")
 
-    with open(f"data/{ctx.guild.id}/reminders.json", "w") as f:
-        json.dump(reminders, f, indent=4)
-    print(f"\t[SAVE] Reminder Saved!")
+    save_reminders(ctx.guild.id, reminders)
+
     print(f"\t[REMI] Reminder ID: {reminders[-1]['reminder_id']} Created!")
     await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)
 

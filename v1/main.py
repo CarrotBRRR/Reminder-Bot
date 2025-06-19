@@ -365,7 +365,6 @@ async def local_to_bot(
     elif timezone:
         # If timezone is provided, convert to UTC offset
         try:
-            print(1)
             utc = get_timezone_offset_str(timezone)
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
@@ -378,7 +377,7 @@ async def local_to_bot(
             ctx,
             time=time if time is not None else datetime.now() - timedelta(minutes=parse_UTC(utc)),
             timezone=timezone if timezone is not None else "UTC",
-            to="UTC" if utc is None else utc
+            to="UTC"
         )
     
     elif utc:
@@ -424,7 +423,6 @@ async def time_convert(
 
     if timezone is not None:
         try:
-            print(2)
             origin_utc = get_timezone_offset_str(timezone)
 
         except FileNotFoundError:
@@ -441,7 +439,6 @@ async def time_convert(
 
     if to is not None:
         try:
-            print(3)
             target_utc = get_timezone_offset_str(to)
 
         except FileNotFoundError:

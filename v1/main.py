@@ -375,9 +375,9 @@ async def local_to_bot(
 
         await time_convert(
             ctx,
-            time=time if time is not None else datetime.now() - timedelta(minutes=parse_UTC(utc)),
+            time=time if time is not None else (datetime.now() - timedelta(minutes=parse_UTC(utc))).strftime("%Y-%m-%d-%H:%M"),
             timezone=timezone if timezone is not None else "UTC",
-            to="UTC"
+            to=None
         )
     
     elif utc:

@@ -414,10 +414,6 @@ async def time_convert(
 ):
     await ctx.defer(ephemeral=True)
 
-    # If no time is provided, use the current time
-    if time is None:
-        time = datetime.now().strftime("%Y-%m-%d-%H:%M")
-
     if timezone is not None:
         try:
             origin_utc = get_timezone_offset_str(timezone)
@@ -454,18 +450,21 @@ async def time_convert(
         origin_offset = parse_UTC(origin_utc)
         target_offset = parse_UTC(target_utc)
 
-        # Parse the time string
-        datetime_obj = parse_flexible_time(time)    # Base time in the origin timezone
+        if time is None:
+            time = (datetime.now() + timedelta(minutes=origin_offset)).strftime("%Y-%m-%d-%H:%M")
 
-        # Convert to UTC
-        utc_datetime = datetime_obj - timedelta(minutes=origin_offset) # Adjust to UTC
+        # Parse the time string
+        origin_datetime = parse_flexible_time(time)    # Base time in the origin timezone
+
+        # Convert origin to UTC
+        utc_datetime = origin_datetime - timedelta(minutes=origin_offset) # Adjust to UTC
         unix_time = int(utc_datetime.timestamp())
 
         # Convert to target timezone
         target_datetime = utc_datetime + timedelta(minutes=target_offset)
 
         await ctx.send(
-            f"## {datetime_obj.strftime('%Y-%m-%d-%H:%M')} {timezone.upper()} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to.upper()} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
+            f"## {origin_datetime.strftime('%Y-%m-%d-%H:%M')} {timezone.upper()} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to.upper()} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
             ephemeral=True
         )
 

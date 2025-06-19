@@ -8,6 +8,7 @@ from ReminderLib.Paginator import Paginator
 from ReminderLib.Parser import *
 from ReminderLib.DBController import *
 
+print("[INFO] REMI v1.1.0 - Reminder Bot")
 load_dotenv()
 
 intents = dc.Intents.default()

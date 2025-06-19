@@ -11,6 +11,7 @@ from ReminderLib.Parser import *
 from ReminderLib.DBController import *
 
 ### GLOBALS
+print("[INFO] REMI v1.0.0 - Reminder Bot")
 load_dotenv()
 
 reminders = []

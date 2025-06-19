@@ -391,7 +391,7 @@ async def local_to_bot(
  
             bot_time_offset = (parse_flexible_time(time) + timedelta(minutes=utc_offset)).strftime("%Y-%m-%d-%H:%M")   
             await ctx.send(
-                f"{time} (UTC{utc}) is:\n## {bot_time_offset} (UTC)",
+                f"## {time} UTC{utc} is:\n## {bot_time_offset} UTC",
                 ephemeral=True
             )
 
@@ -399,7 +399,6 @@ async def local_to_bot(
             await ctx.send(str(e), ephemeral=True)
             return
             
-
 @bot.hybrid_command(
     name="timeconvert",
     description="Convert a time to another timezone",

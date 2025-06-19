@@ -593,7 +593,7 @@ async def time_convert(
         target_datetime = utc_datetime + timedelta(minutes=target_offset)
 
         await ctx.send(
-            f"## {datetime_obj.strftime('%Y-%m-%d-%H:%M')} {timezone.upper()} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to} (UTC{target_utc.upper()})\n### <t:{unix_time}:F> in your local time",
+            f"## {datetime_obj.strftime('%Y-%m-%d-%H:%M')} {timezone.upper()} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to.upper()} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
             ephemeral=True
         )
 

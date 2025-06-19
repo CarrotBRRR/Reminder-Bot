@@ -628,6 +628,7 @@ async def list_timezones(ctx: commands.Context):
     for i, (timezone, utc) in enumerate(timezones_info.items()):
         em.add_field(
             name=f"{timezone:>5} UTC{utc}",
+            value="",
             inline=True
         )
 

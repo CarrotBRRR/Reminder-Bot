@@ -623,8 +623,7 @@ async def list_timezones(ctx: commands.Context):
     em = dc.Embed(
         title="Available Timezones",
         description="List of available timezones with their UTC offsets",
-        color=0x00ff00,
-        inline=True
+        color=0x00ff00
     )
     for i, (timezone, utc) in enumerate(timezones_info.items()):
         em.add_field(
@@ -635,8 +634,7 @@ async def list_timezones(ctx: commands.Context):
         if (i + 1) % 25 == 0:
             ems.append(em)
             em = dc.Embed(
-                color=0x00ff00,
-                inline=True
+                color=0x00ff00
             )
 
     await ctx.send(embeds=ems, ephemeral=True)

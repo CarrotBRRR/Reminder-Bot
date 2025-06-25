@@ -178,7 +178,7 @@ async def create_reminder(
     print(f"\t[MAKE] Finished Parsing info!")
 
     print(f"\t[MAKE] Creating reminder...")
-    reminders.append({
+    reminder_obj = {
         "issuer_id": ctx.author.id,
         "guild_id": ctx.guild.id,
         "channel_id": ctx.channel.id,
@@ -190,11 +190,11 @@ async def create_reminder(
         "message": message,
         "mentions": mention_str,
         "repeat": int(repeat_seconds/60) if repeat else None,
-    })
+    }
 
     print(f"\t[MAKE] Done!")
 
-    save_reminders(ctx.guild.id, reminders)
+    save_reminders(ctx.guild.id, reminder_obj)
 
     print(f"\t[REMI] Reminder ID: {reminders[-1]['reminder_id']} Created!")
     await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)

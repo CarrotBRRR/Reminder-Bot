@@ -194,7 +194,7 @@ async def create_reminder(
 
     print(f"\t[MAKE] Done!")
 
-    save_reminders(ctx.guild.id, reminder_obj)
+    await save_reminders(ctx.guild.id, reminder_obj)
 
     print(f"\t[REMI] Reminder ID: {reminders[-1]['reminder_id']} Created!")
     await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)

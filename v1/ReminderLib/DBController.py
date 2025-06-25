@@ -16,13 +16,10 @@ async def load_reminders(guild_id : int) -> typing.List[typing.Dict]:
     
     return reminders
 
-async def save_reminders(guild_id : int, reminder : typing.Dict):
+async def save_reminders(guild_id : int, reminders : typing.List[typing.Dict]):
     """
     Save reminders to file
     """
-    reminders = load_reminders(guild_id)
-    reminders.append(reminder)
-
     print(f"\t[SAVE] Saving {len(reminders)} reminders for {guild_id}...")
     if not os.path.exists(f"data/{guild_id}"):
         os.makedirs(f"data/{guild_id}")

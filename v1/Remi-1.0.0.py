@@ -113,6 +113,70 @@ async def send_reminder(reminder, guild):
     await channel.send(content=payload, embed=embed)
     print(f"\t[REMI] Sent reminder to {channel.name} - {channel.id} in {guild.name} - {guild.id}")
 
+async def create_reminder_dm(
+    ctx : commands.Context,
+    time : typing.Optional[str] = None,     # Inital time to remind
+    title : str = "",                       # Title of the reminder
+    subtitles : typing.Optional[str] = "",  # Subtitle of the reminder
+    messages : typing.Optional[str] = "",   # Message to send
+    mentions : typing.Optional[str] = "",   # Mentions to send the reminder to
+    repeat : typing.Optional[str] = None,   # Interval to repeat the reminder in the same format as time (i.e. amount of time to add)
+):
+    """
+    Create a reminder in DMs
+    """
+    print(f"[REMI] {ctx.author.name} creating reminder in DMs")
+    
+    try:
+        reminders = await load_reminders_dm(ctx.user.id)
+    except:
+        print(f"[REMI] ERROR {e}")
+
+    if time is None:
+        time = datetime.now().strftime("%Y-%m-%d-%H:%M")
+
+    if mentions is not None or mentions != "":
+        mention_str = [ctx.author.mention]
+        
+    subs = []
+    for subtitle in subtitles.split("\n"):
+        subs.append(subtitle)
+
+    msgs = []
+    for message in messages.split("\n"):
+        msgs.append(message)
+
+    if len(subs) < len(msgs):
+        await ctx.send("The number of messages must be less than or equal to number of subtitles!", ephemeral=True)
+        return
+    
+    try:
+        t = parse_flexible_time(time)
+    except ValueError as e:
+        await ctx.send(str(e), ephemeral=True)
+        return
+
+    repeat_seconds = await time2seconds(ctx, repeat) if repeat else None
+
+    reminders = [{
+        "issuer_id": ctx.author.id,
+        "guild_id": None,
+        "channel_id": ctx.channel.id,
+        "reminder_id": uuid_base62(),
+
+        "time": t.strftime("%Y-%m-%d-%H:%M"),
+        "title": title,
+        "subtitles": subtitles,
+        "message": message,
+        "mentions": mention_str,
+        "repeat": int(repeat_seconds/60) if repeat else None,
+    }]
+
+    await save_reminders(ctx.author.id, reminders)
+
+    print(f"[REMI] Reminder ID: {reminders[-1]['reminder_id']} Created!")
+    await ctx.send(f"Reminder {title} set for {mention_str} at {time}", ephemeral=True)
+
 # COMMANDS
 @bot.hybrid_command(
     name="remind",
@@ -136,9 +200,16 @@ async def create_reminder(
     """
     Create a reminder!
     """
-    reminders = await load_reminders(ctx.guild.id)
 
-    print(f"[REMI] {ctx.author.name} creating reminder in {ctx.guild.name}")
+    try:
+        reminders = await load_reminders(ctx.guild.id)
+        print(f"[REMI] {ctx.author.name} creating reminder in {ctx.guild.name}")
+        
+    except e:
+        print(f"[REMI] No guild found. {ctx.author.name} creating reminder in DMs")
+        await create_reminder_dm(ctx, time, title, subtitles, messages, mentions, repeat)
+        return
+
     print(f"\t[MAKE] Parsing info...")
     print(f"\t\t[MAKE] Parsing mentions...")
     if time is None:
@@ -575,6 +646,62 @@ async def reminder_task():
                 json.dump(reminders, f, indent=4)
 
     print("[REMI] Finished checking reminders!")
+
+@tasks.loop(seconds=60)
+async def dm_reminder_task():
+    """
+    Check DMs for reminders every minute
+    """
+    print("[REMI] Checking DM reminders...")
+    now_str = datetime.now().strftime("%Y-%m-%d-%H:%M")
+    now_dt = datetime.strptime(now_str, "%Y-%m-%d-%H:%M")
+    print(f"\t[REMI] Current time: {now_str}")
+
+    for user in bot.users:
+        if user.bot:
+            continue
+
+        reminders = await load_reminders_dm(user.id)
+        updated = False
+
+        for reminder in reminders[:]:
+            reminder_time = datetime.strptime(reminder["time"], "%Y-%m-%d-%H:%M")
+            late = reminder_time < now_dt
+            do_reminder = late or reminder_time == now_dt
+
+            if late:
+                print(f"\t[REMI] DM Reminder {reminder['reminder_id']} is in the past!")
+
+                if reminder["repeat"] is not None:
+                    # Calculate how many repeats have passed and update time accordingly
+                    delta_min = (now_dt - reminder_time).total_seconds() // 60
+                    repeats_passed = int(delta_min // reminder["repeat"]) + 1
+                    new_time = reminder_time + timedelta(minutes=repeats_passed * reminder["repeat"])
+                    reminder["time"] = new_time.strftime("%Y-%m-%d-%H:%M")
+
+                    print(f"\t[REMI] DM Reminder time updated to: {reminder['time']}")
+                    updated = True
+
+            if do_reminder:
+                await send_reminder(reminder, user)
+                if reminder["repeat"] is None:
+                    print(f"\t[REMI] No repeat set. Removing DM reminder {reminder['reminder_id']} for {user.name}")
+                    reminders.remove(reminder)
+                    updated = True
+
+                elif not late:
+                    # Regular (non-late) repeating reminder; update time
+                    next_time = datetime.strptime(reminder["time"], "%Y-%m-%d-%H:%M") + timedelta(minutes=reminder["repeat"])
+                    reminder["time"] = next_time.strftime("%Y-%m-%d-%H:%M")
+                    updated = True
+
+                elif reminder["repeat"] is None:
+                    print(f"\t[REMI] DM Reminder {reminder['reminder_id']} was late.")
+
+        if updated:
+            with open(f"data/-1/{user.id}/reminders.json", "w") as f:
+                json.dump(reminders, f, indent=4)
+    print("[REMI] Finished checking DM reminders!")
 
 @tasks.loop(minutes=15)
 async def heartbeat_task():

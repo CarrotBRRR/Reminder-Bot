@@ -145,7 +145,7 @@ async def create_reminder(
         "repeat": int(repeat_sec / 60) if repeat_sec else None,
     }
     reminders.append(reminder)
-    save_reminders(ctx.guild.id, reminders)
+    await save_reminders(ctx.guild.id, reminders)
     await ctx.send(f"Reminder **{title}** set for {time} (mentions: {' '.join(mention_str)})", ephemeral=True)
 
 @bot.hybrid_command(name="reminders", description="List all reminders")
@@ -175,7 +175,7 @@ async def delete_reminder(ctx: commands.Context, reminder_id: str):
                 await ctx.send("Insufficient permissions to delete this reminder.", ephemeral=True)
                 return
             reminders.remove(r)
-            save_reminders(ctx.guild.id, reminders)
+            await save_reminders(ctx.guild.id, reminders)
             await ctx.send("Reminder deleted.", ephemeral=True)
             return
     await ctx.send("Reminder ID not found.", ephemeral=True)

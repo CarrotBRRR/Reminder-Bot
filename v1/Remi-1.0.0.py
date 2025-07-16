@@ -431,12 +431,8 @@ async def local_to_bot(
     utc: typing.Optional[str] = None        # Only +X or -X
 ):
     await ctx.defer(ephemeral=True)
-
-    if not utc and not timezone:
-        await ctx.send("Please provide either a UTC offset or a timezone.", ephemeral=True)
-        return
     
-    if utc and timezone:
+    if (utc and timezone) or (not utc and not timezone):
         await ctx.send("Please provide either a UTC offset or a timezone, not both.", ephemeral=True)
         return
     

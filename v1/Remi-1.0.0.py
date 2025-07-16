@@ -433,7 +433,7 @@ async def local_to_bot(
     await ctx.defer(ephemeral=True)
     
     if (utc and timezone) or (not utc and not timezone):
-        await ctx.send("Please provide either a UTC offset or a timezone, not both.", ephemeral=True)
+        await ctx.send("Please provide either a UTC offset or a timezone, but not both.", ephemeral=True)
         return
     
     elif timezone:

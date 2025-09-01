@@ -1,4 +1,4 @@
-import os, json, uuid, requests
+import os, json, uuid, requests, asyncio
 import discord as dc
 import typing
 
@@ -611,5 +611,27 @@ async def sync(ctx : commands.Context):
     await msg.edit(content="Synced the tree!", delete_after=2)
     print(f"[REMI] Synced the tree!")
 
-# bot.run(os.getenv("TEST_TOKEN"))
-bot.run(os.getenv("TOKEN"))
+async def run_bot(token: str):
+    while True:
+        try:
+            await bot.start(token)
+        except (dc.ConnectionClosed, dc.GatewayNotFound, dc.HTTPException) as e:
+            print(f"[WARN] Lost connection: {e}. Retrying in 10s...")
+            await asyncio.sleep(10)
+        except Exception as e:
+            print(f"[ERROR] Fatal error: {e}")
+            break
+
+async def sleep_forever():
+    while True:
+        await asyncio.sleep(3600)
+
+if os.getenv("TEST_ENV") == "TRUE":
+    token = os.getenv("TEST_TOKEN")
+elif os.getenv("TEST_ENV") == "FALSE":
+    token = os.getenv("TOKEN")
+else:
+    print("[ERROR] TEST_ENV not set!")
+    asyncio.run(sleep_forever())
+    
+asyncio.run(run_bot(token))

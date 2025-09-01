@@ -632,6 +632,9 @@ elif os.getenv("TEST_ENV") == "FALSE":
     token = os.getenv("TOKEN")
 else:
     print("[ERROR] TEST_ENV not set!")
-    asyncio.run(sleep_forever())
-    
+    try:
+        asyncio.run(sleep_forever())
+    except Exception as e:
+        print(f"[NOTE] Sleep Cancelled! {e}")
+
 asyncio.run(run_bot(token))

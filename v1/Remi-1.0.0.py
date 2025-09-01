@@ -618,6 +618,10 @@ async def run_bot(token: str):
         except (dc.ConnectionClosed, dc.GatewayNotFound, dc.HTTPException) as e:
             print(f"[WARN] Lost connection: {e}. Retrying in 10s...")
             await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            print("[INFO] Bot shutdown requested!")
+            # Important: do not re-raise here
+            break
         except Exception as e:
             print(f"[ERROR] Fatal error: {e}")
             break
@@ -634,7 +638,10 @@ else:
     print("[ERROR] TEST_ENV not set!")
     try:
         asyncio.run(sleep_forever())
-    except Exception as e:
-        print(f"[NOTE] Sleep Cancelled! {e}")
+    except asyncio.CancelledError:
+        print("[INFO] Sleep Cancelled!")
 
-asyncio.run(run_bot(token))
+try:
+    asyncio.run(run_bot(token))
+except KeyboardInterrupt:
+    print("[INFO] Bot stopped by keyboard interrupt!")

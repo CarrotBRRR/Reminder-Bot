@@ -631,6 +631,7 @@ async def sleep_forever():
         await asyncio.sleep(3600)
 
 if os.getenv("TEST_ENV") == "TRUE":
+    print("[INFO] Running in test environment!")
     token = os.getenv("TEST_TOKEN")
 elif os.getenv("TEST_ENV") == "FALSE":
     token = os.getenv("TOKEN")

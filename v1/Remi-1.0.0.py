@@ -52,10 +52,14 @@ async def on_ready():
         await dc.utils.sleep_until(datetime.now() + timedelta(seconds=60 - datetime.now().second)) # Wait for the next minute
         reminder_task.start()
         print("\t[INIT] Started reminder loop!")
+    else:
+        print("\t[INIT] Reminder loop already running!")
 
     if not heartbeat_task.is_running():
         heartbeat_task.start()
         print("\t[INIT] Started heartbeat loop!")
+    else:
+        print("\t[INIT] Heartbeat loop already running!")
     
     print("[INIT] Loops Started!")
 
@@ -590,9 +594,16 @@ async def heartbeat_task():
             print("[BEAT] Heartbeat sent successfully!")
         else:
             print(f"[BEAT] Failed to send heartbeat: {response.status_code} - {response.text}")
+            # Stop all tasks if heartbeat fails
+            if reminder_task.is_running():
+                reminder_task.stop()
+                print("\t[BEAT] Stopped reminder task successfully.")
+
+            if heartbeat_task.is_running():
+                heartbeat_task.stop()
+                print("\t[BEAT] Stopped heartbeat task successfully.")
 
     except Exception as e:
-        # Optional: local logging of the failure
         print(f"[BEAT] Failed to send ping: {e}")
 
 # OWNER COMMANDS

@@ -596,11 +596,11 @@ async def heartbeat_task():
             print(f"[BEAT] Failed to send heartbeat: {response.status_code} - {response.text}")
             # Stop all tasks if heartbeat fails
             if reminder_task.is_running():
-                reminder_task.stop()
+                reminder_task.cancel()
                 print("\t[BEAT] Stopped reminder task successfully.")
 
             if heartbeat_task.is_running():
-                heartbeat_task.stop()
+                heartbeat_task.cancel()
                 print("\t[BEAT] Stopped heartbeat task successfully.")
 
     except Exception as e:

@@ -592,16 +592,17 @@ async def heartbeat_task():
         response = requests.get(f"https://hc-ping.com/{heartbeat_uuid}")
         if response.status_code == 200:
             print("[BEAT] Heartbeat sent successfully!")
+
+            if not reminder_task.is_running():
+                reminder_task.start()
+                print("\t[BEAT] Restarted reminder task successfully.")
+
         else:
             print(f"[BEAT] Failed to send heartbeat: {response.status_code} - {response.text}")
-            # Stop all tasks if heartbeat fails
+            # Stop task if heartbeat fails
             if reminder_task.is_running():
                 reminder_task.cancel()
                 print("\t[BEAT] Stopped reminder task successfully.")
-
-            if heartbeat_task.is_running():
-                heartbeat_task.cancel()
-                print("\t[BEAT] Stopped heartbeat task successfully.")
 
     except Exception as e:
         print(f"[BEAT] Failed to send ping: {e}")

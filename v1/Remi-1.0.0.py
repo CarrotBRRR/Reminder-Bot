@@ -632,11 +632,10 @@ async def run_bot(token: str):
             await asyncio.sleep(10)
         except asyncio.CancelledError:
             print("[INFO] Bot shutdown requested!")
-            # Important: do not re-raise here
             break
         except Exception as e:
             print(f"[ERROR] Fatal error: {e}")
-            break
+            raise e
 
 async def sleep_forever():
     while True:
@@ -658,3 +657,5 @@ try:
     asyncio.run(run_bot(token))
 except KeyboardInterrupt:
     print("[INFO] Bot stopped by keyboard interrupt!")
+except Exception as e:
+    print(f"[ERROR] Fatal error: {e}")

@@ -30,15 +30,13 @@ intents.guild_messages = True
 bot = commands.Bot(command_prefix="rm.", intents=intents)
 
 # Database directory
-DB_DIR = "data/remi_db"
-os.makedirs(DB_DIR, exist_ok=True)
-
+REMINDER_DB = "data/reminders"
+os.makedirs(REMINDER_DB, exist_ok=True)
 
 # Helper: create or return DB instance for a guild
 def get_db_for_guild(guild_id: int) -> PyStoreJSONDB:
-    path = os.path.join(DB_DIR, f"guild_{guild_id}.json")
+    path = os.path.join(REMINDER_DB, f"guild_{guild_id}.json")
     return PyStoreJSONDB(path)
-
 
 # UUID base62 generator
 def uuid_base62():
@@ -51,12 +49,10 @@ def uuid_base62():
         base62 = alphabet[rem] + base62
     return base62
 
-
 # Database read/write helpers (async signatures kept for compatibility)
 async def load_reminders(guild_id: int) -> list:
     db = get_db_for_guild(guild_id)
     return db.get_all()
-
 
 async def save_reminders_full(guild_id: int, reminders: list):
     """
@@ -66,7 +62,6 @@ async def save_reminders_full(guild_id: int, reminders: list):
     db = get_db_for_guild(guild_id)
     # Use db._save (internal) to replace entire file atomically
     db._save(reminders)
-
 
 async def upsert_reminder(guild_id: int, reminder: dict):
     """
@@ -79,11 +74,9 @@ async def upsert_reminder(guild_id: int, reminder: dict):
     else:
         db.insert(reminder)
 
-
 async def delete_reminder_by_id(guild_id: int, reminder_id: str) -> int:
     db = get_db_for_guild(guild_id)
     return db.delete_by("reminder_id", reminder_id)
-
 
 # Sending reminder embed
 async def send_reminder(reminder, guild):
@@ -113,7 +106,6 @@ async def send_reminder(reminder, guild):
         print(f"\t[REMI] Sent reminder to {channel.name} - {channel.id} in {guild.name} - {guild.id}")
     except Exception as e:
         print(f"\t[ERROR] Failed to send reminder {reminder.get('reminder_id')}: {e}")
-
 
 # EVENTS
 @bot.event
@@ -152,14 +144,12 @@ async def on_ready():
 
     print("[INIT] Loops Started!")
 
-
 @bot.event
 async def on_message(message: dc.Message):
     """
     Called when a message is sent in a channel
     """
     await bot.process_commands(message)
-
 
 @bot.event
 async def on_guild_join(guild: dc.Guild):
@@ -173,7 +163,6 @@ async def on_guild_join(guild: dc.Guild):
     # Ensure DB file exists (constructor will make file if not present)
     get_db_for_guild(guild.id)
     print(f"[REMI] Prepared DB and folders for guild: {guild.name} - {guild.id}")
-
 
 # COMMANDS
 @bot.hybrid_command(
@@ -250,7 +239,6 @@ async def create_reminder(
     print(f"\t[MAKE] Reminder ID: {reminder_obj['reminder_id']} Created!")
     await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)
 
-
 @bot.hybrid_command(
     name="reminders",
     description="List all reminders for the server",
@@ -301,7 +289,6 @@ async def list_reminders(ctx: commands.Context):
     await ctx.send(embed=em, ephemeral=True)
     print(f"[LIST] Sent reminders list of {len(reminders)} reminders in {ctx.guild.name} -> {ctx.channel.name}")
 
-
 @bot.hybrid_command(
     name="delete_reminder",
     description="Delete a reminder by ID",
@@ -336,7 +323,6 @@ async def delete_reminder(ctx: commands.Context, reminder_id: str):
         print(f"[DLET] Deleted reminder {reminder_id} in {ctx.guild.name}")
     else:
         await ctx.send("Reminder not found... Please ensure you have the correct Reminder ID", ephemeral=True)
-
 
 @bot.hybrid_command(
     name="show_reminder",
@@ -401,7 +387,6 @@ async def bot_time(ctx: commands.Context, time: typing.Optional[str] = None):
     time_int = int(datetime_obj.timestamp())
     await ctx.send(f"## {datetime_obj.strftime('%Y-%m-%d-%H:%M')} UTC (Bot Time) is:\n## <t:{time_int}:F> Your Time", ephemeral=True)
 
-
 @bot.hybrid_command(
     name="localtime",
     description="Convert a local time with UTC offset (e.g. -7, +2) to the bot's UTC time or your timezone code",
@@ -440,7 +425,6 @@ async def local_to_bot(ctx: commands.Context, time: typing.Optional[str] = None,
         except ValueError as e:
             await ctx.send(str(e), ephemeral=True)
             return
-
 
 @bot.hybrid_command(
     name="timeconvert",
@@ -499,7 +483,6 @@ async def time_convert(ctx: commands.Context, time: typing.Optional[str] = None,
         await ctx.send(f"Error: {str(e)}", ephemeral=True)
         return
 
-
 @bot.hybrid_command(
     name="timezones",
     description="List all accepted timezones",
@@ -544,7 +527,6 @@ async def list_timezones(ctx: commands.Context):
     pages = Paginator(ems)
     msg = await ctx.send(embed=ems[0], view=pages, ephemeral=True)
     pages.message = msg
-
 
 # TASKS
 @tasks.loop(seconds=60)
@@ -605,7 +587,6 @@ async def reminder_task():
 
     print("[REMI] Finished checking reminders!")
 
-
 @tasks.loop(minutes=15)
 async def heartbeat_task():
     """
@@ -632,7 +613,6 @@ async def heartbeat_task():
     except Exception as e:
         print(f"[BEAT] Failed to send ping: {e}")
 
-
 # OWNER COMMANDS
 @bot.command(
     name="sync",
@@ -652,7 +632,6 @@ async def sync(ctx: commands.Context):
     await msg.edit(content="Synced the tree!", delete_after=2)
     print(f"[REMI] Synced the tree!")
 
-
 # Runner
 async def run_bot(token: str):
     while True:
@@ -668,11 +647,9 @@ async def run_bot(token: str):
             with open(f"error_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.log", "a") as f:
                 f.write(f"{str(e)}\n")
 
-
 async def sleep_forever():
     while True:
         await asyncio.sleep(3600)
-
 
 if os.getenv("TEST_ENV") == "TRUE":
     print("[INFO] Running in test environment!")

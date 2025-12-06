@@ -319,7 +319,9 @@ async def test_reminder(
                     inline=False,
                 )
             
-            await channel.send(embed=em ,ephemeral=True)
+            mentions_str = " ".join(reminder.get("mentions", [])) if reminder.get("mentions") else None
+            
+            await ctx.send(content=mentions_str, embed=em ,ephemeral=True)
             print(f"[REMI] Tested reminder {reminder['reminder_id']} to {channel.name} in {ctx.guild.name}")
             return
 

@@ -634,8 +634,8 @@ async def run_bot(token: str):
             print("[INFO] Bot shutdown requested!")
             break
         except Exception as e:
-            print(f"[ERROR] Fatal error: {e}")
-            raise e
+            with open(f"error_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.log", "a") as f:
+                f.write(f"{str(e)}\n")
 
 async def sleep_forever():
     while True:
@@ -655,7 +655,7 @@ else:
 
 try:
     asyncio.run(run_bot(token))
-except KeyboardInterrupt:
-    print("[INFO] Bot stopped by keyboard interrupt!")
 except Exception as e:
-    print(f"[ERROR] Fatal error: {e}")
+    # Append to error logs
+    with open(f"fatal_error_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.log", "a") as f:
+        f.write(f"{str(e)}\n")

@@ -131,6 +131,7 @@ async def send_reminder(reminder, guild):
 async def create_reminder(
     ctx : commands.Context,
     time : typing.Optional[str] = None,     # Inital time to remind
+    timezone : typing.Optional[str] = None, # Timezone of the time provided
     title : str = "",                       # Title of the reminder
     subtitles : typing.Optional[str] = "",  # Subtitle of the reminder
     messages : typing.Optional[str] = "",   # Message to send
@@ -147,6 +148,20 @@ async def create_reminder(
     print(f"\t\t[MAKE] Parsing mentions...")
     if time is None:
         time = datetime.now().strftime("%Y-%m-%d-%H:%M")
+        if timezone is not None:
+            try:
+                utc = get_timezone_offset_str(timezone)
+
+            except FileNotFoundError:
+                await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
+                return
+            
+            except ValueError as e:
+                await ctx.send(str(e), ephemeral=True)
+                return
+
+            time = (datetime.now() + timedelta(minutes=parse_UTC(utc))).strftime("%Y-%m-%d-%H:%M")
+            print(f"\t\t[MAKE] No time provided. Using current time adjusted for timezone: {time} UTC{utc}")
 
     mention_str = await get_mentions(mentions, ctx.guild)
 
@@ -364,10 +379,10 @@ async def local_to_bot(
     time: typing.Optional[str] = None,  # Time in HH:MM or MM-DD-HH:MM or DD-HH:MM or YY-MM-DD-HH:MM
     timezone: typing.Optional[str] = None,  # e.g. MDT, EST, etc.
     utc: typing.Optional[str] = None        # Only +X or -X
-):
+) -> datetime | None:
     if (utc and timezone) or (not utc and not timezone):
         await ctx.send("Please provide either a UTC offset or a timezone, but not both.", ephemeral=True)
-        return
+        return None
     
     elif timezone:
         # If timezone is provided, convert to UTC offset
@@ -375,17 +390,19 @@ async def local_to_bot(
             utc = get_timezone_offset_str(timezone)
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
-            return
+            return None
         except ValueError as e:
             await ctx.send(str(e), ephemeral=True)
-            return
+            return None
 
-        await time_convert(
+        converted_time = await time_convert(
             ctx,
             time=time if time is not None else (datetime.now() + timedelta(minutes=parse_UTC(utc))).strftime("%Y-%m-%d-%H:%M"),
             timezone=timezone if timezone is not None else "UTC",
             to=None
         )
+
+        return converted_time
     
     elif utc:
         # If UTC offset is provided, convert to UTC
@@ -401,6 +418,7 @@ async def local_to_bot(
                 f"## {time} UTC{utc} is:\n## {bot_time_offset} UTC",
                 ephemeral=True
             )
+            return parse_flexible_time(bot_time_offset)
 
         except ValueError as e:
             await ctx.send(str(e), ephemeral=True)
@@ -418,7 +436,7 @@ async def time_convert(
     time: typing.Optional[str] = None,  # Time in HH:MM or MM
     timezone: typing.Optional[str] = None,  # e.g. MDT, EST, etc.
     to: typing.Optional[str] = None        # e.g. GMT, MDT, EST
-):
+) -> datetime | None:
     await ctx.defer(ephemeral=True)
 
     if timezone is not None:
@@ -427,11 +445,11 @@ async def time_convert(
 
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
-            return
-        
+            return None
+         
         except ValueError as e:
             await ctx.send(str(e), ephemeral=True)
-            return
+            return None
     else:
         # Default to UTC if no timezone is provided
         timezone = "UTC"
@@ -443,11 +461,11 @@ async def time_convert(
 
         except FileNotFoundError:
             await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
-            return
+            return None
         
         except ValueError as e:
             await ctx.send(str(e), ephemeral=True)
-            return
+            return None
     else:
         # Default to UTC if no target timezone is provided
         to = "UTC"
@@ -474,10 +492,11 @@ async def time_convert(
             f"## {origin_datetime.strftime('%Y-%m-%d-%H:%M')} {timezone.upper()} (UTC{origin_utc}) is:\n## {target_datetime.strftime('%Y-%m-%d-%H:%M')} {to.upper()} (UTC{target_utc})\n### <t:{unix_time}:F> in your local time",
             ephemeral=True
         )
+        return target_datetime
 
     except Exception as e:
         await ctx.send(f"Error: {str(e)}", ephemeral=True)
-        return
+        return None
 
 @bot.hybrid_command(
     name="timezones",

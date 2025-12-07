@@ -145,23 +145,11 @@ async def create_reminder(
 
     print(f"[REMI] {ctx.author.name} creating reminder in {ctx.guild.name}")
     print(f"\t[MAKE] Parsing info...")
-    print(f"\t\t[MAKE] Parsing mentions...")
+    
     if time is None:
         time = datetime.now().strftime("%Y-%m-%d-%H:%M")
     
-    if timezone is not None:
-        try:
-            utc = get_timezone_offset_str(timezone)
-
-        except FileNotFoundError:
-            await ctx.send(f"timezones_info.json file not found. Please Contact Bot Owner", ephemeral=True)
-            return
-        
-        except ValueError as e:
-            await ctx.send(str(e), ephemeral=True)
-            return
-
-        time = (datetime.strptime(time, "%Y-%m-%d-%H:%M") + timedelta(minutes=parse_UTC(utc))).strftime("%Y-%m-%d-%H:%M")
+    print(f"\t\t[MAKE] Parsing mentions...")
 
     mention_str = await get_mentions(mentions, ctx.guild)
 
@@ -186,6 +174,14 @@ async def create_reminder(
     # Adding date info to the time string
     try:
         t = parse_flexible_time(time)
+        # If timezone is provided, convert to UTC
+        if timezone is not None:
+            origin_utc = get_timezone_offset_str(timezone) # e.g. MDT, EST, etc.
+            origin_offset = parse_UTC(origin_utc) # in minutes
+
+            converted_time = t - timedelta(minutes=origin_offset) # time in UTC
+            
+            t = converted_time
 
     except ValueError as e:
         await ctx.send(str(e), ephemeral=True)

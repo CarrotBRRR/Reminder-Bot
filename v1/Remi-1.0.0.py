@@ -638,7 +638,7 @@ async def sync(ctx : commands.Context):
     """
     Sync the tree
     """
-    msg = await ctx.send("Syncing...", ephemeral=True)
+    msg = await ctx.send("Syncing...")
     await bot.tree.sync()
     await ctx.message.delete()
     await msg.edit(content="Synced the tree!", delete_after=2)

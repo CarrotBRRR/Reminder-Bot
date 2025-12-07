@@ -124,7 +124,7 @@ def get_timezone_offset_str(timezone: str) -> str:
 
 async def time2unix(datetime_str: str) -> int:
     """
-    Converts a datetime object to a Unix timestamp
+    Converts a datetime string to a Unix timestamp
     """
     datetime_obj = parse_flexible_time(datetime_str)
 

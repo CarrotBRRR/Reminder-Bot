@@ -210,9 +210,15 @@ async def create_reminder(
     print(f"\t[MAKE] Done!")
 
     await save_reminders(ctx.guild.id, reminders)
-
+    unix_time = await time2unix(reminders[-1]['time'])
     print(f"\t[REMI] Reminder ID: {reminders[-1]['reminder_id']} Created!")
-    await ctx.send(f"Reminder {title} set for {mentions} at {time}", ephemeral=True)
+
+    value_str = f"Reminder `{title}`\
+                \nset for {mentions}\
+                \non <t:{unix_time}:F>\
+                \nwith Reminder ID: `{reminders[-1]['reminder_id']}`"
+
+    await ctx.send(value_str, ephemeral=True)
 
 @bot.hybrid_command(
     name="reminders",
